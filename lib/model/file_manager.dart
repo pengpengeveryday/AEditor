@@ -17,23 +17,29 @@ class FileInfo {
 
   @override
   String toString() {
-    final logger = Logger();
+    final logger = Logger.instance;
     logger.d('FileInfo{name: $name, path: $path, isFile: $isFile, extension: $extension}');
     return 'FileInfo{name: $name, path: $path, isFile: $isFile, extension: $extension}';
   }
 }
 
 class FileManager {
-  final _logger = Logger();
+  static final FileManager _instance = FileManager._();
+  static FileManager get instance => _instance;
   
-  // 单例模式
-  static final FileManager _instance = FileManager._internal();
-  
-  factory FileManager() {
-    return _instance;
-  }
+  // 私有构造函数
+  FileManager._();
 
-  FileManager._internal();
+  Future<List<FileInfo>> loadFiles(String path) async {
+    try {
+      final files = await listFiles(path);
+      Logger.instance.d('Loaded ${files.length} files from $path');
+      return files;
+    } catch (e) {
+      Logger.instance.e('Error loading files', e);
+      return [];
+    }
+  }
 
   /// 获取指定路径下的所有文件和文件夹信息
   Future<List<FileInfo>> listFiles(String directoryPath) async {
@@ -41,7 +47,7 @@ class FileManager {
       final directory = io.Directory(directoryPath);
       
       if (!await directory.exists()) {
-        _logger.e('Directory does not exist: $directoryPath');
+        Logger.instance.e('Directory does not exist: $directoryPath');
         throw Exception('Directory does not exist: $directoryPath');
       }
 
@@ -67,19 +73,18 @@ class FileManager {
         return a.isFile ? 1 : -1;
       });
 
-      _logger.i('Listed ${files.length} files in $directoryPath');
+      Logger.instance.i('Listed ${files.length} files in $directoryPath');
       return files;
     } catch (e) {
-      _logger.e('Error listing files: $e');
+      Logger.instance.e('Error listing files', e);
       throw Exception('Error listing files: $e');
     }
   }
 
   /// 检查文件或目录是否存在
   static Future<bool> exists(String path) async {
-    final logger = Logger();
     final exists = await io.File(path).exists();
-    logger.d('Checking if file exists: $path - $exists');
+    Logger.instance.d('Checking if file exists: $path - $exists');
     return exists;
   }
 
@@ -88,10 +93,10 @@ class FileManager {
     try {
       final file = io.File(filePath);
       final size = await file.length();
-      _logger.d('File size for $filePath: $size bytes');
+      Logger.instance.d('File size for $filePath: $size bytes');
       return size;
     } catch (e) {
-      _logger.e('Error getting file size: $e');
+      Logger.instance.e('Error getting file size', e);
       throw Exception('Error getting file size: $e');
     }
   }
@@ -108,7 +113,7 @@ class FileManager {
     }
 
     final result = '${size.toStringAsFixed(2)} ${suffixes[i]}';
-    _logger.d('Formatted size: $bytes bytes -> $result');
+    Logger.instance.d('Formatted size: $bytes bytes -> $result');
     return result;
   }
 } 

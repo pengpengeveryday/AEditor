@@ -10,10 +10,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final _fileManager = FileManager();
-  final _logger = Logger();
   List<FileInfo> _files = [];
-  String _currentPath = '名家'; // 当前目录名称
+  String _currentPath = '/sdcard';
+
+  String _getTitle() {
+    return _currentPath == '/sdcard' ? 'AEditor' : _currentPath.split('/').last;
+  }
 
   @override
   void initState() {
@@ -22,14 +24,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadFiles() async {
-    try {
-      final files = await _fileManager.listFiles('/sdcard');
-      setState(() {
-        _files = files;
-      });
-    } catch (e) {
-      _logger.e('Error loading files: $e');
-    }
+    final files = await FileManager.instance.loadFiles('/sdcard');
+    setState(() {
+      _files = files;
+    });
   }
 
   @override
@@ -39,7 +37,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: Text(
-          _currentPath,
+          _getTitle(),
           style: const TextStyle(color: Colors.white),
         ),
         actions: [

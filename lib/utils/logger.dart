@@ -1,26 +1,35 @@
 class Logger {
-  static const String _tag = 'AEditor';
-  static final Logger _instance = Logger._internal();
+  static final Logger _instance = Logger._();
   
-  factory Logger() {
-    return _instance;
-  }
+  static Logger get instance => _instance;
+  
+  Logger._();
 
-  Logger._internal();
+  static const String TAG = "[AEditor]";
+  static bool _enableLog = true;
 
   void d(String message) {
-    print('$_tag DEBUG: $message');
-  }
-
-  void e(String message) {
-    print('$_tag ERROR: $message');
+    if (_enableLog) {
+      print("$TAG [DEBUG] $message");
+    }
   }
 
   void i(String message) {
-    print('$_tag INFO: $message');
+    if (_enableLog) {
+      print("$TAG [INFO] $message");
+    }
   }
 
   void w(String message) {
-    print('$_tag WARN: $message');
+    if (_enableLog) {
+      print("$TAG [WARN] $message");
+    }
+  }
+
+  void e(String message, [dynamic error]) {
+    if (_enableLog) {
+      print("$TAG [ERROR] $message");
+      if (error != null) print("$TAG [ERROR] $error");
+    }
   }
 } 
