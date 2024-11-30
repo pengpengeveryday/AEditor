@@ -3,14 +3,11 @@ import '../model/file_manager.dart';
 import '../utils/logger.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
+import 'text_reader.dart';
+import '../model/settings.dart';
 
 class FolderBrowser extends StatefulWidget {
-  final String initialPath;
-
-  const FolderBrowser({
-    super.key,
-    required this.initialPath,
-  });
+  const FolderBrowser({super.key});
 
   @override
   State<FolderBrowser> createState() => _FolderBrowserState();
@@ -18,8 +15,10 @@ class FolderBrowser extends StatefulWidget {
 
 class _FolderBrowserState extends State<FolderBrowser> {
   List<FileInfo> _files = [];
-  late String _currentPath;
+  final ScrollController _scrollController = ScrollController();
 
+  String get _currentPath => Settings.instance.currentPath;
+  
   String _getTitle() {
     return FileManager.instance.isRootPath(_currentPath) ? 'AEditor' : path.basename(_currentPath);
   }
@@ -27,8 +26,46 @@ class _FolderBrowserState extends State<FolderBrowser> {
   @override
   void initState() {
     super.initState();
-    _currentPath = widget.initialPath;
-    _loadFiles();
+    _initializeFolder();
+  }
+
+  Future<void> _initializeFolder() async {
+    String? lastReadingFile = Settings.instance.currentReadingTextFile;
+    if (lastReadingFile != null) {
+      String lastReadingDir = path.dirname(lastReadingFile);
+      Logger.instance.d('Last reading directory: $lastReadingDir');
+      
+      await Settings.instance.setCurrentPath(lastReadingDir);
+      await _loadFiles();
+      
+      // 等待文件列表加载完成后再滚动
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToFile(lastReadingFile);
+      });
+    } else {
+      _loadFiles();
+    }
+  }
+
+  void _scrollToFile(String filePath) {
+    String fileName = path.basename(filePath);
+    int fileIndex = _files.indexWhere((file) => file.name == fileName);
+    
+    if (fileIndex != -1) {
+      Logger.instance.d('Scrolling to file: $fileName at index $fileIndex');
+      double offset = fileIndex * 56.0; // 假设每个ListTile高度为56
+      _scrollController.animateTo(
+        offset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadFiles() async {
@@ -42,14 +79,10 @@ class _FolderBrowserState extends State<FolderBrowser> {
     }
   }
 
-  void _handleFolderTap(FileInfo folder) {
-    setState(() {
-      _currentPath = folder.path;
-    });
+  void _handleFolderTap(FileInfo folder) async {
+    await Settings.instance.setCurrentPath(folder.path);
     _loadFiles();
   }
-
-  String currentPath = FileManager.rootPath;  // 使用 FileManager 中定义的根路径
 
   Future<bool> _onWillPop() async {
     Logger.instance.d('Handling back press, current path: $_currentPath');
@@ -62,9 +95,7 @@ class _FolderBrowserState extends State<FolderBrowser> {
     String parentPath = path.dirname(_currentPath);
     Logger.instance.d('Moving to parent directory: $parentPath');
     
-    setState(() {
-      _currentPath = parentPath;
-    });
+    await Settings.instance.setCurrentPath(parentPath);
     await _loadFiles();
     
     return false;
@@ -92,6 +123,7 @@ class _FolderBrowserState extends State<FolderBrowser> {
           ],
         ),
         body: ListView.builder(
+          controller: _scrollController,
           itemCount: _files.length,
           itemBuilder: (context, index) {
             final file = _files[index];
@@ -113,7 +145,12 @@ class _FolderBrowserState extends State<FolderBrowser> {
                 if (!file.isFile) {
                   _handleFolderTap(file);
                 } else {
-                  // TODO: 处理文件点击事件
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TextReader(filePath: file.path),
+                    ),
+                  );
                 }
               },
             );
