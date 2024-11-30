@@ -1,35 +1,43 @@
-class Logger {
-  static final Logger _instance = Logger._();
-  
-  static Logger get instance => _instance;
-  
-  Logger._();
+import 'package:flutter/foundation.dart';
 
-  static const String TAG = "[AEditor]";
-  static bool _enableLog = true;
+class Logger {
+  static final Logger _instance = Logger._internal();
+  static Logger get instance => _instance;
+
+  Logger._internal();
+
+  String _getTimestamp() {
+    final now = DateTime.now();
+    return '${now.hour.toString().padLeft(2, '0')}-'
+           '${now.minute.toString().padLeft(2, '0')}-'
+           '${now.second.toString().padLeft(2, '0')}:'
+           '${now.millisecond.toString().padLeft(3, '0')}';
+  }
 
   void d(String message) {
-    if (_enableLog) {
-      print("$TAG [DEBUG] $message");
+    if (kDebugMode) {
+      print('AEditor [${_getTimestamp()}] [D] $message');
     }
   }
 
   void i(String message) {
-    if (_enableLog) {
-      print("$TAG [INFO] $message");
+    if (kDebugMode) {
+      print('AEditor [${_getTimestamp()}] [I] $message');
     }
   }
 
   void w(String message) {
-    if (_enableLog) {
-      print("$TAG [WARN] $message");
+    if (kDebugMode) {
+      print('AEditor [${_getTimestamp()}] [W] $message');
     }
   }
 
   void e(String message, [dynamic error]) {
-    if (_enableLog) {
-      print("$TAG [ERROR] $message");
-      if (error != null) print("$TAG [ERROR] $error");
+    if (kDebugMode) {
+      print('AEditor [${_getTimestamp()}] [E] $message');
+      if (error != null) {
+        print('AEditor [${_getTimestamp()}] [E] $error');
+      }
     }
   }
 } 

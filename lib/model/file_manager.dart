@@ -2,6 +2,18 @@ import 'dart:io' as io;
 import 'package:path/path.dart' as path;
 import '../utils/logger.dart';
 
+import 'package:permission_handler/permission_handler.dart';
+
+// 在访问文件之前调用这个方法
+Future<bool> requestStoragePermission() async {
+  // 请求管理所有文件的权限
+  var status = await Permission.manageExternalStorage.status;
+  if (!status.isGranted) {
+    status = await Permission.manageExternalStorage.request();
+  }
+  return status.isGranted;
+}
+
 class FileInfo {
   final String name;        // 文件名
   final String path;        // 完整路径
@@ -44,6 +56,14 @@ class FileManager {
   /// 获取指定路径下的所有文件和文件夹信息
   Future<List<FileInfo>> listFiles(String directoryPath) async {
     try {
+      // 添加权限检查日志
+      Logger.instance.d('Checking storage permissions...');
+      if (!await requestStoragePermission()) {
+        Logger.instance.e('Storage permission denied');
+        throw Exception('Storage permission denied');
+      }
+      Logger.instance.d('Storage permission granted');
+
       final directory = io.Directory(directoryPath);
       
       if (!await directory.exists()) {
@@ -51,11 +71,16 @@ class FileManager {
         throw Exception('Directory does not exist: $directoryPath');
       }
 
+      Logger.instance.d('Starting to list directory: $directoryPath');
       List<FileInfo> files = [];
       
-      await for (final entity in directory.list(recursive: false)) {
+      await for (final entity in directory.list()) {
+        Logger.instance.d('Raw entity path: ${entity.path}, type: ${entity.runtimeType}');
         final name = path.basename(entity.path);
         final isFile = entity is io.File;
+        
+        Logger.instance.d('Found entity - name: $name, isFile: $isFile');
+        if (name.startsWith('.')) continue;
         
         files.add(FileInfo(
           name: name,

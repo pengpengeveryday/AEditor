@@ -40,6 +40,13 @@ class _FolderBrowserState extends State<FolderBrowser> {
     }
   }
 
+  void _handleFolderTap(FileInfo folder) {
+    setState(() {
+      _currentPath = folder.path;
+    });
+    _loadFiles();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,14 +86,7 @@ class _FolderBrowserState extends State<FolderBrowser> {
             ),
             onTap: () {
               if (!file.isFile) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FolderBrowser(
-                      initialPath: file.path,
-                    ),
-                  ),
-                );
+                _handleFolderTap(file);
               } else {
                 // TODO: 处理文件点击事件
               }
