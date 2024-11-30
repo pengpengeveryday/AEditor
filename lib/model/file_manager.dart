@@ -39,8 +39,17 @@ class FileManager {
   static final FileManager _instance = FileManager._();
   static FileManager get instance => _instance;
   
+  // 添加根目录路径常量
+  static const String rootPath = '/sdcard';
+  
   // 私有构造函数
   FileManager._();
+
+  /// 判断给定路径是否为根目录
+  bool isRootPath(String path) {
+    Logger.instance.d('Checking if path is root: $path');
+    return path == rootPath;
+  }
 
   Future<List<FileInfo>> loadFiles(String path) async {
     try {
