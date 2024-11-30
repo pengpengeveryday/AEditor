@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 import '../utils/logger.dart';
 import '../model/settings.dart';
+import '../widgets/text_settings_dialog.dart';
 
 class TextReader extends StatefulWidget {
   final String filePath;
@@ -20,10 +21,12 @@ class _TextReaderState extends State<TextReader> {
   String _content = '';
   bool _isLoading = true;
   final ScrollController _scrollController = ScrollController();
+  late TextSettings _textSettings;
   
   @override
   void initState() {
     super.initState();
+    _loadTextSettings();
     _loadContent();
     _saveReadingFile();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
@@ -32,13 +35,33 @@ class _TextReaderState extends State<TextReader> {
     _scrollController.addListener(_handleScroll);
   }
 
+  void _loadTextSettings() {
+    final savedSettings = Settings.instance.getTextSettings(widget.filePath);
+    if (savedSettings != null) {
+      setState(() {
+        _textSettings = TextSettings.fromJson(savedSettings);
+      });
+      Logger.instance.d('Loaded text settings for ${widget.filePath}');
+    } else {
+      _textSettings = TextSettings();  // 使用默认设置
+      Logger.instance.d('Using default text settings');
+    }
+  }
+
+  Future<void> _saveTextSettings() async {
+    await Settings.instance.saveTextSettings(
+      widget.filePath,
+      _textSettings.toJson(),
+    );
+    Logger.instance.d('Saved text settings for ${widget.filePath}');
+  }
+
   @override
   void dispose() {
-    // 确保在页面关闭时保存最终进度
+    _saveTextSettings();
     _saveCurrentProgress();
     _scrollController.removeListener(_handleScroll);
     Settings.instance.setCurrentReadingTextFile(null);
-    Logger.instance.d('Cleared current reading text file');
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _scrollController.dispose();
     super.dispose();
@@ -103,35 +126,89 @@ class _TextReaderState extends State<TextReader> {
     Logger.instance.d('Saved reading progress: $progress');
   }
 
+  void _showSettingsDialog() {
+    // 使用新的 Navigator 上下文来显示对话框
+    Navigator.of(context, rootNavigator: true).push(
+      DialogRoute(
+        context: context,
+        builder: (dialogContext) => TextSettingsDialog(
+          initialSettings: _textSettings,
+          onSettingsChanged: (settings) {
+            setState(() {
+              _textSettings = settings;
+            });
+            _saveTextSettings();
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTap: () async {
-          // 退出前保存进度
-          await _saveCurrentProgress();
-          if (context.mounted) {
-            Navigator.of(context).pop();
-          }
-        },
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                ),
-              )
-            : SingleChildScrollView(
-                controller: _scrollController,
-                child: SelectableText(
-                  _content,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    height: 1.5,
-                  ),
-                ),
+      body: SingleChildScrollView(
+        controller: _scrollController,
+        child: SelectableText(
+          _content,
+          contextMenuBuilder: (context, editableTextState) {
+            final List<ContextMenuButtonItem> buttonItems = 
+              editableTextState.contextMenuButtonItems;
+            
+            buttonItems.add(
+              ContextMenuButtonItem(
+                label: '设置',
+                onPressed: () {
+                  // 只关闭上下文菜单
+                  editableTextState.hideToolbar();
+                  // 显示设置对话框
+                  _showSettingsDialog();
+                },
               ),
+            );
+            
+            return AdaptiveTextSelectionToolbar.buttonItems(
+              anchors: editableTextState.contextMenuAnchors,
+              buttonItems: buttonItems,
+            );
+          },
+          style: TextStyle(
+            color: _textSettings.textColor,
+            fontSize: _textSettings.fontSize,
+            height: _textSettings.lineHeight,
+            fontWeight: _textSettings.isBold ? FontWeight.bold : FontWeight.normal,
+            decoration: _textSettings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
+          ),
+        ),
+      ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Opacity(
+          opacity: 0.3,
+          child: FloatingActionButton(
+            mini: true,
+            backgroundColor: Colors.grey,
+            child: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              await _saveCurrentProgress();
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+        ),
       ),
     );
   }

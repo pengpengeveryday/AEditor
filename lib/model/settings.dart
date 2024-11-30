@@ -1,17 +1,19 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/logger.dart';
+import 'package:flutter/material.dart';
+import 'dart:convert';
 
 class Settings {
   static const String _currentPathKey = 'current_path';
   static const String _currentReadingTextFileKey = 'current_reading_text_file';
   static const String _readingProgressKey = 'reading_progress';
+  static const String _textSettingsKey = 'text_settings';
+  
   static Settings? _instance;
   late SharedPreferences _prefs;
   
-  // 私有构造函数
   Settings._();
   
-  // 单例访问
   static Settings get instance {
     _instance ??= Settings._();
     return _instance!;
@@ -93,6 +95,43 @@ class Settings {
       Logger.instance.d('Cleared reading progress for $filePath');
     } catch (e) {
       Logger.instance.e('Failed to clear reading progress', e);
+    }
+  }
+
+  // 保存文本设置
+  Future<void> saveTextSettings(String filePath, Map<String, dynamic> settings) async {
+    try {
+      final key = '${_textSettingsKey}_$filePath';
+      final jsonString = json.encode(settings);
+      await _prefs.setString(key, jsonString);
+      Logger.instance.d('Saved text settings for $filePath');
+    } catch (e) {
+      Logger.instance.e('Failed to save text settings', e);
+    }
+  }
+
+  // 获取文本设置
+  Map<String, dynamic>? getTextSettings(String filePath) {
+    try {
+      final key = '${_textSettingsKey}_$filePath';
+      final jsonString = _prefs.getString(key);
+      if (jsonString != null) {
+        return json.decode(jsonString) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      Logger.instance.e('Failed to get text settings', e);
+    }
+    return null;
+  }
+
+  // 清除文本设置
+  Future<void> clearTextSettings(String filePath) async {
+    try {
+      final key = '${_textSettingsKey}_$filePath';
+      await _prefs.remove(key);
+      Logger.instance.d('Cleared text settings for $filePath');
+    } catch (e) {
+      Logger.instance.e('Failed to clear text settings', e);
     }
   }
 } 

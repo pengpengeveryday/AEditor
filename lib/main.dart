@@ -10,7 +10,6 @@ void main() async {
   Logger.instance.i('Initializing application');
   await Settings.instance.init();
   
-  // 检查并加载上次阅读的文件路径
   String? lastReadingFile = Settings.instance.currentReadingTextFile;
   if (lastReadingFile != null) {
     String lastReadingDir = path.dirname(lastReadingFile);
@@ -31,6 +30,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AEditor',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
