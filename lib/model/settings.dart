@@ -7,7 +7,7 @@ class Settings {
   static const String _currentPathKey = 'current_path';
   static const String _currentReadingTextFileKey = 'current_reading_text_file';
   static const String _readingProgressKey = 'reading_progress';
-  static const String _textSettingsKey = 'text_settings';
+  static const String _textSettingsKey = 'global_text_settings';
   
   static Settings? _instance;
   late SharedPreferences _prefs;
@@ -98,23 +98,21 @@ class Settings {
     }
   }
 
-  // 保存文本设置
-  Future<void> saveTextSettings(String filePath, Map<String, dynamic> settings) async {
+  // 保存文本设置（全局）
+  Future<void> saveTextSettings(Map<String, dynamic> settings) async {
     try {
-      final key = '${_textSettingsKey}_$filePath';
       final jsonString = json.encode(settings);
-      await _prefs.setString(key, jsonString);
-      Logger.instance.d('Saved text settings for $filePath');
+      await _prefs.setString(_textSettingsKey, jsonString);
+      Logger.instance.d('Saved global text settings');
     } catch (e) {
       Logger.instance.e('Failed to save text settings', e);
     }
   }
 
-  // 获取文本设置
-  Map<String, dynamic>? getTextSettings(String filePath) {
+  // 获取文本设置（全局）
+  Map<String, dynamic>? getTextSettings() {
     try {
-      final key = '${_textSettingsKey}_$filePath';
-      final jsonString = _prefs.getString(key);
+      final jsonString = _prefs.getString(_textSettingsKey);
       if (jsonString != null) {
         return json.decode(jsonString) as Map<String, dynamic>;
       }

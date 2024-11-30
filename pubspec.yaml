@@ -1,5 +1,5 @@
-name: robot2_new
-description: "A new Flutter project."
+name: aeditor
+description: "A text editor app."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -77,17 +77,23 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
+
+  fonts:
+    - family: SongTi
+      fonts:
+        - asset: assets/fonts/宋体.ttf
+    - family: YouYuan
+      fonts:
+        - asset: assets/fonts/幼圆.ttf
+    - family: FZXiaoHei
+      fonts:
+        - asset: assets/fonts/方正小黑.ttf
+    - family: KaiShu
+      fonts:
+        - asset: assets/fonts/楷书.ttf
+    - family: XingKai
+      fonts:
+        - asset: assets/fonts/行楷.ttf
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package

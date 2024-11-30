@@ -16,6 +16,8 @@ class FolderBrowser extends StatefulWidget {
 class _FolderBrowserState extends State<FolderBrowser> {
   List<FileInfo> _files = [];
   final ScrollController _scrollController = ScrollController();
+  bool _showMask = false;
+  bool _isScrolling = false;
 
   String get _currentPath => Settings.instance.currentPath;
   
@@ -27,6 +29,13 @@ class _FolderBrowserState extends State<FolderBrowser> {
   void initState() {
     super.initState();
     _initializeFolder();
+    _scrollController.addListener(() {
+      if (_scrollController.position.isScrollingNotifier.value) {
+        _isScrolling = true;
+      } else {
+        _isScrolling = false;
+      }
+    });
   }
 
   Future<void> _initializeFolder() async {
@@ -105,72 +114,93 @@ class _FolderBrowserState extends State<FolderBrowser> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: _onWillPop,
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          backgroundColor: Colors.black,
-          title: Text(
-            _getTitle(),
-            style: const TextStyle(color: Colors.white),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
-              onPressed: () {
-                // TODO: 实现菜单功能
-              },
-            ),
-          ],
-        ),
-        body: ListView.builder(
-          controller: _scrollController,
-          itemCount: _files.length,
-          itemBuilder: (context, index) {
-            final file = _files[index];
-            return Column(
-              children: [
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
-                  leading: Icon(
-                    file.isFile ? Icons.insert_drive_file : Icons.folder_outlined,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                  title: Text(
-                    file.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 19,
-                      height: 1.2,
-                    ),
-                  ),
-                  onTap: () {
-                    if (!file.isFile) {
-                      _handleFolderTap(file);
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TextReader(filePath: file.path),
-                        ),
-                      );
-                    }
+      child: Stack(
+        children: [
+          Scaffold(
+            backgroundColor: Colors.black,
+            appBar: AppBar(
+              backgroundColor: Colors.black,
+              title: Text(
+                _getTitle(),
+                style: const TextStyle(color: Colors.white),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  onPressed: () {
+                    // TODO: 实现菜单功能
                   },
                 ),
-                const Divider(
-                  height: 1,
-                  thickness: 0.5,
-                  color: Colors.grey,
-                  indent: 16.0,
-                  endIndent: 16.0,
-                ),
               ],
-            );
-          },
-        ),
+            ),
+            body: ListView.builder(
+              controller: _scrollController,
+              itemCount: _files.length,
+              itemBuilder: (context, index) {
+                final file = _files[index];
+                return Column(
+                  children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      leading: Icon(
+                        file.isFile ? Icons.insert_drive_file : Icons.folder_outlined,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      title: Text(
+                        file.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          height: 1.2,
+                        ),
+                      ),
+                      onTap: () {
+                        if (!file.isFile) {
+                          _handleFolderTap(file);
+                        } else {
+                          setState(() {
+                            _showMask = true;
+                          });
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TextReader(filePath: file.path),
+                            ),
+                          ).then((_) {
+                            Future.delayed(const Duration(milliseconds: 500), () {
+                              if (mounted) {
+                                setState(() {
+                                  _showMask = false;
+                                });
+                              }
+                            });
+                          });
+                        }
+                      },
+                    ),
+                    const Divider(
+                      height: 1,
+                      thickness: 0.5,
+                      color: Colors.grey,
+                      indent: 16.0,
+                      endIndent: 16.0,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          if (_showMask)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black,
+              ),
+            ),
+        ],
       ),
     );
   }

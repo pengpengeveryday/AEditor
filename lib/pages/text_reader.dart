@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 import '../utils/logger.dart';
 import '../model/settings.dart';
+import '../models/text_settings.dart';
 import '../widgets/text_settings_dialog.dart';
 
 class TextReader extends StatefulWidget {
@@ -30,18 +31,16 @@ class _TextReaderState extends State<TextReader> {
     _loadContent();
     _saveReadingFile();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-
-    // 添加滚动监听器，实时保存进度
     _scrollController.addListener(_handleScroll);
   }
 
   void _loadTextSettings() {
-    final savedSettings = Settings.instance.getTextSettings(widget.filePath);
+    final savedSettings = Settings.instance.getTextSettings();
     if (savedSettings != null) {
       setState(() {
         _textSettings = TextSettings.fromJson(savedSettings);
       });
-      Logger.instance.d('Loaded text settings for ${widget.filePath}');
+      Logger.instance.d('Loaded global text settings');
     } else {
       _textSettings = TextSettings();  // 使用默认设置
       Logger.instance.d('Using default text settings');
@@ -49,11 +48,8 @@ class _TextReaderState extends State<TextReader> {
   }
 
   Future<void> _saveTextSettings() async {
-    await Settings.instance.saveTextSettings(
-      widget.filePath,
-      _textSettings.toJson(),
-    );
-    Logger.instance.d('Saved text settings for ${widget.filePath}');
+    await Settings.instance.saveTextSettings(_textSettings.toJson());
+    Logger.instance.d('Saved global text settings');
   }
 
   @override
@@ -144,6 +140,110 @@ class _TextReaderState extends State<TextReader> {
     );
   }
 
+  Widget _buildParagraph(String text) {
+    if (text.isEmpty) return const SizedBox.shrink();
+
+    // 处理段落首字符放大
+    if (_textSettings.enlargeFirstLetter) {
+      final firstChar = text[0];
+      final restText = text.substring(1);
+      
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: _textSettings.paragraphSpacing * 16.0,
+        ),
+        child: SelectableText.rich(
+          TextSpan(
+            children: [
+              // 首行空格
+              if (_textSettings.firstLineSpaces > 0)
+                TextSpan(
+                  text: '　' * _textSettings.firstLineSpaces,
+                  style: TextStyle(
+                    color: _textSettings.textColor,
+                    fontSize: _textSettings.fontSize,
+                    fontFamily: _textSettings.fontFamily,
+                  ),
+                ),
+              // 放大的首字符
+              TextSpan(
+                text: firstChar,
+                style: TextStyle(
+                  color: _textSettings.textColor,
+                  fontSize: _textSettings.fontSize * 1.5,
+                  height: _textSettings.lineHeight,
+                  fontWeight: _textSettings.isBold ? FontWeight.bold : FontWeight.normal,
+                  decoration: _textSettings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
+                  fontFamily: _textSettings.fontFamily,
+                ),
+              ),
+              // 剩余文本
+              TextSpan(
+                text: restText,
+                style: TextStyle(
+                  color: _textSettings.textColor,
+                  fontSize: _textSettings.fontSize,
+                  height: _textSettings.lineHeight,
+                  fontWeight: _textSettings.isBold ? FontWeight.bold : FontWeight.normal,
+                  decoration: _textSettings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
+                  fontFamily: _textSettings.fontFamily,
+                ),
+              ),
+            ],
+          ),
+          contextMenuBuilder: _buildContextMenu,
+        ),
+      );
+    }
+
+    // 普通段落（无首字符放大）
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: _textSettings.paragraphSpacing * 16.0,
+      ),
+      child: SelectableText(
+        _textSettings.firstLineSpaces > 0 
+            ? '　' * _textSettings.firstLineSpaces + text
+            : text,
+        style: TextStyle(
+          color: _textSettings.textColor,
+          fontSize: _textSettings.fontSize,
+          height: _textSettings.lineHeight,
+          fontWeight: _textSettings.isBold ? FontWeight.bold : FontWeight.normal,
+          decoration: _textSettings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
+          fontFamily: _textSettings.fontFamily,
+        ),
+        contextMenuBuilder: _buildContextMenu,
+      ),
+    );
+  }
+
+  Widget _buildContextMenu(BuildContext context, EditableTextState editableTextState) {
+    final List<ContextMenuButtonItem> buttonItems = 
+      editableTextState.contextMenuButtonItems;
+    
+    buttonItems.add(
+      ContextMenuButtonItem(
+        label: '设置',
+        onPressed: () {
+          editableTextState.hideToolbar();
+          _showSettingsDialog();
+        },
+      ),
+    );
+    
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: editableTextState.contextMenuAnchors,
+      buttonItems: buttonItems,
+    );
+  }
+
+  List<Widget> _buildParagraphs() {
+    // 按换行符分割文本
+    final paragraphs = _content.split('\n').where((text) => text.trim().isNotEmpty).toList();
+    return paragraphs.map((text) => _buildParagraph(text.trim())).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -161,36 +261,9 @@ class _TextReaderState extends State<TextReader> {
       backgroundColor: Colors.black,
       body: SingleChildScrollView(
         controller: _scrollController,
-        child: SelectableText(
-          _content,
-          contextMenuBuilder: (context, editableTextState) {
-            final List<ContextMenuButtonItem> buttonItems = 
-              editableTextState.contextMenuButtonItems;
-            
-            buttonItems.add(
-              ContextMenuButtonItem(
-                label: '设置',
-                onPressed: () {
-                  // 只关闭上下文菜单
-                  editableTextState.hideToolbar();
-                  // 显示设置对话框
-                  _showSettingsDialog();
-                },
-              ),
-            );
-            
-            return AdaptiveTextSelectionToolbar.buttonItems(
-              anchors: editableTextState.contextMenuAnchors,
-              buttonItems: buttonItems,
-            );
-          },
-          style: TextStyle(
-            color: _textSettings.textColor,
-            fontSize: _textSettings.fontSize,
-            height: _textSettings.lineHeight,
-            fontWeight: _textSettings.isBold ? FontWeight.bold : FontWeight.normal,
-            decoration: _textSettings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: _buildParagraphs(),
         ),
       ),
       floatingActionButton: Padding(
@@ -205,6 +278,12 @@ class _TextReaderState extends State<TextReader> {
               await _saveCurrentProgress();
               if (context.mounted) {
                 Navigator.of(context).pop();
+                // 延迟500ms后通知目录浏览页显示内容
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (mounted) {
+                    setState(() {});
+                  }
+                });
               }
             },
           ),

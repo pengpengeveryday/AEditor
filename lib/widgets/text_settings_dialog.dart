@@ -1,76 +1,5 @@
 import 'package:flutter/material.dart';
-
-class TextSettings {
-  double fontSize;
-  Color textColor;
-  int paragraphIndent;
-  bool enlargeFirstLetter;
-  bool isBold;
-  double lineHeight;
-  double paragraphSpacing;
-  bool hasUnderline;
-
-  TextSettings({
-    this.fontSize = 16,
-    this.textColor = Colors.white,
-    this.paragraphIndent = 0,
-    this.enlargeFirstLetter = false,
-    this.isBold = false,
-    this.lineHeight = 1.5,
-    this.paragraphSpacing = 1.0,
-    this.hasUnderline = false,
-  });
-
-  // 从 JSON 创建实例
-  factory TextSettings.fromJson(Map<String, dynamic> json) {
-    return TextSettings(
-      fontSize: json['fontSize']?.toDouble() ?? 16,
-      textColor: Color(json['textColor'] ?? 0xFFFFFFFF),
-      paragraphIndent: json['paragraphIndent'] ?? 0,
-      enlargeFirstLetter: json['enlargeFirstLetter'] ?? false,
-      isBold: json['isBold'] ?? false,
-      lineHeight: json['lineHeight']?.toDouble() ?? 1.5,
-      paragraphSpacing: json['paragraphSpacing']?.toDouble() ?? 1.0,
-      hasUnderline: json['hasUnderline'] ?? false,
-    );
-  }
-
-  // 转换为 JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'fontSize': fontSize,
-      'textColor': textColor.value,
-      'paragraphIndent': paragraphIndent,
-      'enlargeFirstLetter': enlargeFirstLetter,
-      'isBold': isBold,
-      'lineHeight': lineHeight,
-      'paragraphSpacing': paragraphSpacing,
-      'hasUnderline': hasUnderline,
-    };
-  }
-
-  TextSettings copyWith({
-    double? fontSize,
-    Color? textColor,
-    int? paragraphIndent,
-    bool? enlargeFirstLetter,
-    bool? isBold,
-    double? lineHeight,
-    double? paragraphSpacing,
-    bool? hasUnderline,
-  }) {
-    return TextSettings(
-      fontSize: fontSize ?? this.fontSize,
-      textColor: textColor ?? this.textColor,
-      paragraphIndent: paragraphIndent ?? this.paragraphIndent,
-      enlargeFirstLetter: enlargeFirstLetter ?? this.enlargeFirstLetter,
-      isBold: isBold ?? this.isBold,
-      lineHeight: lineHeight ?? this.lineHeight,
-      paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
-      hasUnderline: hasUnderline ?? this.hasUnderline,
-    );
-  }
-}
+import '../models/text_settings.dart';  // 导入 TextSettings
 
 class TextSettingsDialog extends StatefulWidget {
   final TextSettings initialSettings;
@@ -133,7 +62,6 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                 const SizedBox(width: 16),
                 GestureDetector(
                   onTap: () {
-                    // 显示简单的颜色选择器
                     showDialog(
                       context: context,
                       builder: (context) => SimpleColorPicker(
@@ -160,28 +88,44 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
               ],
             ),
 
-            // 段前空格数
-            Row(
+            // 段落首行空格
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('段前空格', style: TextStyle(color: Colors.white)),
-                Expanded(
-                  child: Slider(
-                    value: _settings.paragraphIndent.toDouble(),
-                    min: 0,
-                    max: 8,
-                    divisions: 8,
-                    label: _settings.paragraphIndent.toString(),
-                    onChanged: (value) {
+                const Text('首行空格', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,  // 确保占满宽度
+                  child: SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment<int>(value: 0, label: Text('0')),
+                      ButtonSegment<int>(value: 1, label: Text('1')),
+                      ButtonSegment<int>(value: 2, label: Text('2')),
+                      ButtonSegment<int>(value: 4, label: Text('4')),
+                    ],
+                    selected: {_settings.firstLineSpaces},
+                    onSelectionChanged: (Set<int> newSelection) {
                       setState(() {
                         _settings = _settings.copyWith(
-                            paragraphIndent: value.round());
+                          firstLineSpaces: newSelection.first,
+                        );
                         widget.onSettingsChanged(_settings);
                       });
                     },
+                    style: ButtonStyle(
+                      foregroundColor: MaterialStateProperty.all(Colors.white),
+                      backgroundColor: MaterialStateProperty.all(Colors.grey[800]),
+                      // 调整内边距使按钮更紧凑
+                      padding: MaterialStateProperty.all(
+                        const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                    ),
                   ),
                 ),
+                const SizedBox(height: 8),
               ],
             ),
+            const SizedBox(height: 16),
 
             // 段落首字符加大
             SwitchListTile(
@@ -263,6 +207,81 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                   widget.onSettingsChanged(_settings);
                 });
               },
+            ),
+
+            // 字体选择
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('字体', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('系统'),
+                      selected: _settings.fontFamily == null,
+                      onSelected: (bool selected) {
+                        if (selected) {
+                          setState(() {
+                            _settings = _settings.copyWith(fontFamily: null);
+                            widget.onSettingsChanged(_settings);
+                          });
+                        }
+                      },
+                    ),
+                    ChoiceChip(
+                      label: Text('宋体', style: TextStyle(fontFamily: 'SongTi')),
+                      selected: _settings.fontFamily == 'SongTi',
+                      onSelected: (bool selected) {
+                        if (selected) {
+                          setState(() {
+                            _settings = _settings.copyWith(fontFamily: 'SongTi');
+                            widget.onSettingsChanged(_settings);
+                          });
+                        }
+                      },
+                    ),
+                    ChoiceChip(
+                      label: Text('幼圆', style: TextStyle(fontFamily: 'YouYuan')),
+                      selected: _settings.fontFamily == 'YouYuan',
+                      onSelected: (bool selected) {
+                        if (selected) {
+                          setState(() {
+                            _settings = _settings.copyWith(fontFamily: 'YouYuan');
+                            widget.onSettingsChanged(_settings);
+                          });
+                        }
+                      },
+                    ),
+                    ChoiceChip(
+                      label: Text('方正小黑', style: TextStyle(fontFamily: 'FZXiaoHei')),
+                      selected: _settings.fontFamily == 'FZXiaoHei',
+                      onSelected: (bool selected) {
+                        if (selected) {
+                          setState(() {
+                            _settings = _settings.copyWith(fontFamily: 'FZXiaoHei');
+                            widget.onSettingsChanged(_settings);
+                          });
+                        }
+                      },
+                    ),
+                    ChoiceChip(
+                      label: Text('楷书', style: TextStyle(fontFamily: 'KaiShu')),
+                      selected: _settings.fontFamily == 'KaiShu',
+                      onSelected: (bool selected) {
+                        if (selected) {
+                          setState(() {
+                            _settings = _settings.copyWith(fontFamily: 'KaiShu');
+                            widget.onSettingsChanged(_settings);
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),
