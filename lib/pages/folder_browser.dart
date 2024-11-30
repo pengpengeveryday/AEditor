@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 import '../model/file_manager.dart';
 import '../utils/logger.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class FolderBrowser extends StatefulWidget {
+  final String initialPath;
+
+  const FolderBrowser({
+    super.key,
+    required this.initialPath,
+  });
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<FolderBrowser> createState() => _FolderBrowserState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _FolderBrowserState extends State<FolderBrowser> {
   List<FileInfo> _files = [];
-  String _currentPath = '/sdcard';
+  late String _currentPath;
 
   String _getTitle() {
     return _currentPath == '/sdcard' ? 'AEditor' : _currentPath.split('/').last;
@@ -20,14 +25,19 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _currentPath = widget.initialPath;
     _loadFiles();
   }
 
   Future<void> _loadFiles() async {
-    final files = await FileManager.instance.loadFiles('/sdcard');
-    setState(() {
-      _files = files;
-    });
+    try {
+      final files = await FileManager.instance.loadFiles(_currentPath);
+      setState(() {
+        _files = files;
+      });
+    } catch (e) {
+      Logger.instance.e('Error loading files', e);
+    }
   }
 
   @override
@@ -69,19 +79,19 @@ class _HomePageState extends State<HomePage> {
             ),
             onTap: () {
               if (!file.isFile) {
-                // TODO: 处理文件夹点击事件，进入下一级目录
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FolderBrowser(
+                      initialPath: file.path,
+                    ),
+                  ),
+                );
               } else {
                 // TODO: 处理文件点击事件
               }
             },
           );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.white,
-        child: const Icon(Icons.add, color: Colors.black),
-        onPressed: () {
-          // TODO: 实现添加功能
         },
       ),
     );

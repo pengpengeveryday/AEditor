@@ -17,13 +17,20 @@
 
 ## 3. 目录结构规范
 lib/
-  ├── home/           # 首页相关
+  ├── pages/           # 页面文件
+  │   ├── home_page.dart     # 首页
+  │   └── folder_browser.dart # 文件浏览页
+  ├── model/           # 数据模型
+  │   └── file_manager.dart  # 文件管理器
   ├── utils/          # 工具类
   │   └── logger.dart # 日志工具
-  ├── models/         # 数据模型
   └── main.dart       # 入口文件
 
-## 4. 其他规则
+## 4. 页面说明
+- HomePage (home_page.dart): 应用首页，显示"查看目录"按钮
+- FolderBrowser (folder_browser.dart): 文件浏览页，用于浏览和管理文件系统
+
+## 5. 其他规则
 - 使用 markdown 格式响应
 - 如果用户使用其他语言提问，使用相同语言回答
 - 不要编造或猜测信息
