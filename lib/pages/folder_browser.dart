@@ -127,32 +127,47 @@ class _FolderBrowserState extends State<FolderBrowser> {
           itemCount: _files.length,
           itemBuilder: (context, index) {
             final file = _files[index];
-            return ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-              leading: Icon(
-                file.isFile ? Icons.insert_drive_file : Icons.folder_outlined,
-                color: Colors.white,
-                size: 20,
-              ),
-              title: Text(
-                file.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-              onTap: () {
-                if (!file.isFile) {
-                  _handleFolderTap(file);
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TextReader(filePath: file.path),
+            return Column(
+              children: [
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  leading: Icon(
+                    file.isFile ? Icons.insert_drive_file : Icons.folder_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  title: Text(
+                    file.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 19,
+                      height: 1.2,
                     ),
-                  );
-                }
-              },
+                  ),
+                  onTap: () {
+                    if (!file.isFile) {
+                      _handleFolderTap(file);
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TextReader(filePath: file.path),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                const Divider(
+                  height: 1,
+                  thickness: 0.5,
+                  color: Colors.grey,
+                  indent: 16.0,
+                  endIndent: 16.0,
+                ),
+              ],
             );
           },
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:io';
 import '../utils/logger.dart';
 import '../model/settings.dart';
@@ -18,24 +19,44 @@ class TextReader extends StatefulWidget {
 class _TextReaderState extends State<TextReader> {
   String _content = '';
   bool _isLoading = true;
-
+  final ScrollController _scrollController = ScrollController();
+  
   @override
   void initState() {
     super.initState();
     _loadContent();
     _saveReadingFile();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+
+    // 添加滚动监听器，实时保存进度
+    _scrollController.addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    // 确保在页面关闭时保存最终进度
+    _saveCurrentProgress();
+    _scrollController.removeListener(_handleScroll);
+    Settings.instance.setCurrentReadingTextFile(null);
+    Logger.instance.d('Cleared current reading text file');
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // 处理滚动事件，节流保存
+  DateTime _lastSave = DateTime.now();
+  void _handleScroll() {
+    final now = DateTime.now();
+    if (now.difference(_lastSave) > const Duration(seconds: 1)) {
+      _saveCurrentProgress();
+      _lastSave = now;
+    }
   }
 
   Future<void> _saveReadingFile() async {
     await Settings.instance.setCurrentReadingTextFile(widget.filePath);
     Logger.instance.d('Saved current reading text file: ${widget.filePath}');
-  }
-
-  @override
-  void dispose() {
-    Settings.instance.setCurrentReadingTextFile(null);
-    Logger.instance.d('Cleared current reading text file');
-    super.dispose();
   }
 
   Future<void> _loadContent() async {
@@ -46,6 +67,11 @@ class _TextReaderState extends State<TextReader> {
         _content = content;
         _isLoading = false;
       });
+      
+      // 内容加载完成后，恢复阅读进度
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _restoreReadingProgress();
+      });
     } catch (e) {
       Logger.instance.e('Error loading file content', e);
       setState(() {
@@ -55,46 +81,58 @@ class _TextReaderState extends State<TextReader> {
     }
   }
 
+  void _restoreReadingProgress() {
+    if (!_scrollController.hasClients) return;
+    
+    final progress = Settings.instance.getReadingProgress(widget.filePath);
+    Logger.instance.d('Restoring reading progress: $progress');
+    
+    if (progress > 0 && _scrollController.position.maxScrollExtent > 0) {
+      final targetOffset = _scrollController.position.maxScrollExtent * progress;
+      _scrollController.jumpTo(targetOffset);
+      Logger.instance.d('Jumped to offset: $targetOffset');
+    }
+  }
+
+  Future<void> _saveCurrentProgress() async {
+    if (!_scrollController.hasClients || 
+        _scrollController.position.maxScrollExtent <= 0) return;
+    
+    final progress = _scrollController.offset / _scrollController.position.maxScrollExtent;
+    await Settings.instance.saveReadingProgress(widget.filePath, progress);
+    Logger.instance.d('Saved reading progress: $progress');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: Text(
-          widget.filePath.split('/').last,
-          style: const TextStyle(color: Colors.white),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onPressed: () {
-              // TODO: 实现更多选项菜单
-            },
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Colors.white,
-              ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: SelectableText(
-                _content,
-                style: const TextStyle(
+      body: GestureDetector(
+        onTap: () async {
+          // 退出前保存进度
+          await _saveCurrentProgress();
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
+        },
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
                   color: Colors.white,
-                  fontSize: 16,
-                  height: 1.5,
+                ),
+              )
+            : SingleChildScrollView(
+                controller: _scrollController,
+                child: SelectableText(
+                  _content,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 } 
