@@ -12,7 +12,12 @@ class Logger {
   }
 
   String _formatMessage(String message) {
-    return '[$_tag] ${DateTime.now().toString().split('.').first} $message';
+    final now = DateTime.now();
+    final timeStr = '${now.hour.toString().padLeft(2, '0')}:'
+                   '${now.minute.toString().padLeft(2, '0')}:'
+                   '${now.second.toString().padLeft(2, '0')}-'
+                   '${now.millisecond.toString().padLeft(3, '0')}';
+    return '[$_tag] $timeStr $message';
   }
 
   void d(String message, [dynamic error]) {

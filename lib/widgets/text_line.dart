@@ -1,69 +1,114 @@
 import 'package:flutter/material.dart';
 import '../models/text_settings.dart';
+import '../utils/logger.dart';
 
-class TextLine extends StatelessWidget {
+class TextLine extends StatefulWidget {
   final String text;
   final TextSettings settings;
-  final bool isFirstLine;  // 是否是段落的第一行
+  final bool isFirstLine;
   final Widget Function(BuildContext, EditableTextState)? contextMenuBuilder;
+  final Function(int charsUsed)? onLineLayout;
+  final int lineNumber;
 
   const TextLine({
     super.key,
     required this.text,
     required this.settings,
-    this.isFirstLine = false,
+    required this.isFirstLine,
+    required this.lineNumber,
     this.contextMenuBuilder,
+    this.onLineLayout,
   });
 
   @override
-  Widget build(BuildContext context) {
-    // 计算首行缩进
-    final spaces = isFirstLine ? ' ' * settings.firstLineSpaces : '';
-    final displayText = spaces + text;
-    
-    // 判断是否需要放大首字符
-    final needEnlargeFirst = isFirstLine && settings.enlargeFirstLetter && text.isNotEmpty;
-    
-    // 基础文本样式
-    final baseStyle = TextStyle(
-      fontSize: settings.fontSize,
-      height: settings.lineHeight,
-      color: settings.textColor,
-      fontFamily: settings.fontFamily,
-      fontWeight: settings.isBold ? FontWeight.bold : FontWeight.normal,
-      decoration: settings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
-      decorationColor: settings.textColor,
-      decorationStyle: TextDecorationStyle.dotted,
-      decorationThickness: 0.5,
-    );
+  State<TextLine> createState() => _TextLineState();
+}
 
-    return SelectableText.rich(
-      TextSpan(
-        children: needEnlargeFirst
-            ? [
-                // 首字符（放大）
-                TextSpan(
-                  text: spaces + text[0],
-                  style: baseStyle.copyWith(
-                    fontSize: settings.fontSize * 1.5,
-                  ),
-                ),
-                // 剩余文本
-                if (text.length > 1)
-                  TextSpan(
-                    text: text.substring(1),
-                    style: baseStyle,
-                  ),
-              ]
-            : [
-                // 普通文本
-                TextSpan(
-                  text: displayText,
-                  style: baseStyle,
-                ),
-              ],
-      ),
-      contextMenuBuilder: contextMenuBuilder,
+class _TextLineState extends State<TextLine> {
+  bool _hasNotifiedLayout = false;
+
+  TextStyle _getTextStyle() {
+    return TextStyle(
+      fontSize: widget.settings.fontSize,
+      height: widget.settings.lineHeight,
+      color: widget.settings.textColor,
+      fontWeight: widget.settings.isBold ? FontWeight.bold : FontWeight.normal,
+      decoration: widget.settings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
+      fontFamily: widget.settings.fontFamily,
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textStyle = _getTextStyle();
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: widget.text,
+            style: textStyle,
+          ),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+        );
+        
+        textPainter.layout(maxWidth: constraints.maxWidth);
+        
+        int start = 0;
+        int end = widget.text.length;
+        int charsCanFit = 0;
+        
+        while (start <= end) {
+          int mid = (start + end) ~/ 2;
+          textPainter.text = TextSpan(
+            text: widget.text.substring(0, mid),
+            style: textStyle,
+          );
+          textPainter.layout(maxWidth: constraints.maxWidth);
+          
+          if (textPainter.didExceedMaxLines) {
+            end = mid - 1;
+          } else {
+            charsCanFit = mid;
+            start = mid + 1;
+          }
+        }
+        
+        final remainingChars = widget.text.length - charsCanFit;
+        final remainingText = widget.text.substring(charsCanFit);
+        
+        Logger.instance.d('Line ${widget.lineNumber}: '
+            'Total chars: ${widget.text.length}, '
+            'Chars displayed: $charsCanFit, '
+            'Remaining chars: $remainingChars, '
+            'Text: ${widget.text.substring(0, charsCanFit)}, '
+            'Remaining text: $remainingText');
+        
+        if (!_hasNotifiedLayout) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            widget.onLineLayout?.call(charsCanFit);
+            _hasNotifiedLayout = true;
+          });
+        }
+
+        return SizedBox(
+          width: constraints.maxWidth,
+          child: Text(
+            widget.text.substring(0, charsCanFit),
+            style: textStyle,
+            overflow: TextOverflow.clip,
+            softWrap: false,
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void didUpdateWidget(TextLine oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      _hasNotifiedLayout = false;
+    }
   }
 } 
