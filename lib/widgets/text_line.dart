@@ -33,7 +33,7 @@ class _TextLineState extends State<TextLine> {
       height: widget.settings.lineHeight,
       color: widget.settings.textColor,
       fontWeight: widget.settings.isBold ? FontWeight.bold : FontWeight.normal,
-      decoration: widget.settings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
+      decoration: TextDecoration.none,
       fontFamily: widget.settings.fontFamily,
     );
   }
@@ -91,14 +91,28 @@ class _TextLineState extends State<TextLine> {
           });
         }
 
-        return SizedBox(
-          width: constraints.maxWidth,
-          child: Text(
-            widget.text.substring(0, charsCanFit),
-            style: textStyle,
-            overflow: TextOverflow.clip,
-            softWrap: false,
-          ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: constraints.maxWidth,
+              child: Text(
+                widget.text.substring(0, charsCanFit),
+                style: textStyle,
+                overflow: TextOverflow.clip,
+                softWrap: false,
+              ),
+            ),
+            CustomPaint(
+              size: Size(constraints.maxWidth, 3),
+              painter: DashedLinePainter(
+                color: widget.settings.textColor,
+                dashWidth: 2,
+                dashSpace: 2,
+                strokeWidth: 0.5,
+              ),
+            ),
+          ],
         );
       },
     );
@@ -110,5 +124,48 @@ class _TextLineState extends State<TextLine> {
     if (oldWidget.text != widget.text) {
       _hasNotifiedLayout = false;
     }
+  }
+}
+
+// 虚线画笔
+class DashedLinePainter extends CustomPainter {
+  final Color color;
+  final double dashWidth;
+  final double dashSpace;
+  final double strokeWidth;
+
+  DashedLinePainter({
+    required this.color,
+    required this.dashWidth,
+    required this.dashSpace,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    double currentX = 0;
+    final y = size.height / 2;
+
+    while (currentX < size.width) {
+      canvas.drawLine(
+        Offset(currentX, y),
+        Offset(currentX + dashWidth, y),
+        paint,
+      );
+      currentX += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(DashedLinePainter oldDelegate) {
+    return color != oldDelegate.color ||
+           dashWidth != oldDelegate.dashWidth ||
+           dashSpace != oldDelegate.dashSpace ||
+           strokeWidth != oldDelegate.strokeWidth;
   }
 } 
