@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/text_settings.dart';
 import '../utils/logger.dart';
 import 'dart:math';
@@ -7,61 +8,35 @@ class ParagraphText extends StatelessWidget {
   final String text;
   final TextSettings settings;
   final Widget Function(BuildContext, EditableTextState)? contextMenuBuilder;
+  final VoidCallback? onLongPress;
 
   const ParagraphText({
     super.key,
     required this.text,
     required this.settings,
     this.contextMenuBuilder,
+    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (text.isEmpty) return const SizedBox.shrink();
-
-    // 创建一个 painter 来计算实际高度
-    final painter = ParagraphPainter(
-      text: text,
-      settings: settings,
-      hasLargeFirstChar: true,
-    );
-    
-    // 使用 layout builder 获取可用宽度并计算高度
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 计算行信息
-        painter.calculateLines(constraints.maxWidth);
-        
-        // 计算总高度
-        final totalHeight = painter.lines.fold<double>(
-          0, 
-          (sum, line) => sum + line.height
-        );
-        
-        Logger.instance.d('[ParagraphText] Total height: $totalHeight');
-        
-        return SizedBox(
-          height: totalHeight,
-          child: Stack(
-            children: [
-              SelectableText(
-                text,
-                style: TextStyle(
-                  color: Colors.transparent,
-                  fontSize: settings.fontSize,
-                  height: settings.lineHeight,
-                  fontFamily: settings.fontFamily,
-                ),
-                contextMenuBuilder: contextMenuBuilder,
-              ),
-              CustomPaint(
-                painter: painter,
-                size: Size.fromHeight(totalHeight),
-              ),
-            ],
-          ),
-        );
+    return GestureDetector(
+      onLongPress: () {
+        if (onLongPress != null) {
+          HapticFeedback.mediumImpact();
+          onLongPress!();
+        }
       },
+      child: SelectableText(
+        text,
+        contextMenuBuilder: contextMenuBuilder,
+        style: TextStyle(
+          fontSize: settings.fontSize,
+          height: settings.lineHeight,
+          fontFamily: settings.fontFamily,
+          color: settings.textColor,
+        ),
+      ),
     );
   }
 }
