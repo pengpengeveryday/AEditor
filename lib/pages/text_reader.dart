@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import '../utils/logger.dart';
-import '../model/settings.dart';
+import '../models/settings.dart';
 import '../models/text_settings.dart';
 import '../widgets/text_settings_dialog.dart';
 import '../widgets/rich_text.dart';
+import 'package:share_plus/share_plus.dart';
 
 class TextReader extends StatefulWidget {
   final String filePath;

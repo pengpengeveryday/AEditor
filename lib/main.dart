@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'model/settings.dart';
+import 'models/settings.dart';
 import 'pages/home_page.dart';
 import 'utils/logger.dart';
 import 'package:path/path.dart' as path;

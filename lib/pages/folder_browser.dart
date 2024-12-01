@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../model/file_manager.dart';
+import '../models/file_manager.dart';
 import '../utils/logger.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'text_reader.dart';
-import '../model/settings.dart';
+import '../models/settings.dart';
 
 class FolderBrowser extends StatefulWidget {
   const FolderBrowser({super.key});

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../model/file_manager.dart';
-import '../model/settings.dart';
+import '../models/file_manager.dart';
+import '../models/settings.dart';
 import '../utils/logger.dart';
 import 'folder_browser.dart';
 import 'package:path/path.dart' as path;
