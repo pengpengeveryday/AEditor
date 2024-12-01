@@ -41,3 +41,35 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Windows
+/windows/flutter/
+/windows/out/
+/windows/build/
+/windows/.vs/
+/windows/Debug/
+/windows/Release/
+
+# Linux
+/linux/flutter/
+/linux/build/
+
+# macOS
+/macos/Flutter/
+/macos/Pods/
+/macos/build/
+/macos/*.mode1v3
+/macos/*.mode2v3
+/macos/*.moved-aside
+/macos/*.pbxuser
+/macos/*.perspectivev3
+/macos/**/*sync/
+/macos/.sconsign.dblite
+/macos/.tags*
+/macos/.vagrant/
+/macos/DerivedData/
+/macos/Icon?
+/macos/Pods/
+/macos/.symlinks/
+/macos/profile
+/macos/xcuserdata

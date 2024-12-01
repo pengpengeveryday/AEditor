@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import '../models/text_settings.dart';
 import 'text_line.dart';
 
-class ParagraphText extends StatelessWidget {
+class BlockText extends StatelessWidget {
   final String text;
   final TextSettings settings;
   final Widget Function(BuildContext, EditableTextState)? contextMenuBuilder;
 
-  const ParagraphText({
+  const BlockText({
     super.key,
     required this.text,
     required this.settings,

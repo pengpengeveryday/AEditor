@@ -5,7 +5,7 @@ import '../utils/logger.dart';
 import '../models/settings.dart';
 import '../models/text_settings.dart';
 import '../widgets/text_settings_dialog.dart';
-import '../widgets/rich_text.dart';
+import '../widgets/block_text.dart';
 import 'package:share_plus/share_plus.dart';
 
 class TextReader extends StatefulWidget {
@@ -140,7 +140,7 @@ class _TextReaderState extends State<TextReader> {
   }
 
   Widget _buildParagraph(String text) {
-    return ParagraphText(
+    return BlockText(
       text: text,
       settings: _textSettings,  // 传递当前的文本设置
       contextMenuBuilder: _buildContextMenu,
