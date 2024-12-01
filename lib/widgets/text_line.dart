@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import '../models/text_settings.dart';
 import '../utils/logger.dart';
+import 'dart:math' as math;
 
 class TextLine extends StatefulWidget {
   final String text;
@@ -27,6 +28,8 @@ class TextLine extends StatefulWidget {
 
 class _TextLineState extends State<TextLine> {
   bool _hasNotifiedLayout = false;
+  late double _textStartX;
+  late double _textEndX;
 
   TextStyle _getTextStyle() {
     return TextStyle(
@@ -85,8 +88,9 @@ class _TextLineState extends State<TextLine> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final textStyle = _getTextStyle();
+        final textSpan = _buildTextSpan(widget.text, textStyle);
         final textPainter = TextPainter(
-          text: _buildTextSpan(widget.text, textStyle),
+          text: textSpan,
           textDirection: TextDirection.ltr,
           maxLines: 1,
         );
@@ -130,6 +134,31 @@ class _TextLineState extends State<TextLine> {
           });
         }
 
+        // 计算实际文本的起始和结束位置
+        final fullTextPainter = TextPainter(
+          text: _buildTextSpan(widget.text.substring(0, charsCanFit), textStyle),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+        );
+        fullTextPainter.layout(maxWidth: constraints.maxWidth);
+
+        // 修正首行空格宽度计算
+        if (widget.isFirstLine && widget.settings.firstLineSpaces > 0) {
+          final spacePainter = TextPainter(
+            text: TextSpan(
+              text: ' ' * widget.settings.firstLineSpaces,
+              style: textStyle,
+            ),
+            textDirection: TextDirection.ltr,
+          );
+          spacePainter.layout();
+          _textStartX = spacePainter.width - (widget.settings.firstLineSpaces * 0.5);  // 修正偏差
+        } else {
+          _textStartX = 0;
+        }
+        
+        _textEndX = fullTextPainter.width;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -148,6 +177,8 @@ class _TextLineState extends State<TextLine> {
                 dashWidth: 2,
                 dashSpace: 2,
                 strokeWidth: 0.5,
+                startX: _textStartX,
+                endX: _textEndX,
               ),
             ),
           ],
@@ -171,12 +202,16 @@ class DashedLinePainter extends CustomPainter {
   final double dashWidth;
   final double dashSpace;
   final double strokeWidth;
+  final double startX;
+  final double endX;
 
   DashedLinePainter({
     required this.color,
     required this.dashWidth,
     required this.dashSpace,
     required this.strokeWidth,
+    required this.startX,
+    required this.endX,
   });
 
   @override
@@ -186,13 +221,14 @@ class DashedLinePainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
-    double currentX = 0;
+    double currentX = startX;
     final y = size.height / 2;
 
-    while (currentX < size.width) {
+    while (currentX < endX) {
+      final lineEndX = math.min(currentX + dashWidth, endX);
       canvas.drawLine(
         Offset(currentX, y),
-        Offset(currentX + dashWidth, y),
+        Offset(lineEndX, y),
         paint,
       );
       currentX += dashWidth + dashSpace;
@@ -204,6 +240,8 @@ class DashedLinePainter extends CustomPainter {
     return color != oldDelegate.color ||
            dashWidth != oldDelegate.dashWidth ||
            dashSpace != oldDelegate.dashSpace ||
-           strokeWidth != oldDelegate.strokeWidth;
+           strokeWidth != oldDelegate.strokeWidth ||
+           startX != oldDelegate.startX ||
+           endX != oldDelegate.endX;
   }
 } 
