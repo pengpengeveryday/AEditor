@@ -124,19 +124,16 @@ class _TextReaderState extends State<TextReader> {
   }
 
   void _showSettingsDialog() {
-    // 使用新的 Navigator 上下文来显示对话框
-    Navigator.of(context, rootNavigator: true).push(
-      DialogRoute(
-        context: context,
-        builder: (dialogContext) => TextSettingsDialog(
-          initialSettings: _textSettings,
-          onSettingsChanged: (settings) {
-            setState(() {
-              _textSettings = settings;
-            });
-            _saveTextSettings();
-          },
-        ),
+    showDialog(
+      context: context,
+      builder: (context) => TextSettingsDialog(
+        initialSettings: _textSettings,
+        onSettingsChanged: (newSettings) {
+          setState(() {
+            _textSettings = newSettings;
+          });
+          _saveTextSettings();  // 保存设置
+        },
       ),
     );
   }
@@ -144,7 +141,7 @@ class _TextReaderState extends State<TextReader> {
   Widget _buildParagraph(String text) {
     return ParagraphText(
       text: text,
-      settings: _textSettings,
+      settings: _textSettings,  // 传递当前的文本设置
       contextMenuBuilder: _buildContextMenu,
     );
   }
