@@ -49,3 +49,21 @@ lib/
 - 使用 markdown 格式响应
 - 如果用户使用其他语言提问，使用相同语言回答
 - 不要编造或猜测信息
+
+## 7. Git Commit 规则
+当需要生成 commit message 时，基于上次 git 的 diff 内容生成，格式如下：
+- 第一行：类型(scope): 简短描述
+- 空一行
+- 正文：列出具体修改内容
+
+类型包括：
+- feat: 新功能
+- fix: 修复问题
+- docs: 文档修改
+- style: 代码格式修改
+- refactor: 代码重构
+- perf: 优化相关
+- test: 测试相关
+- build: 构建相关
+- ci: CI 相关
+- chore: 其他修改
