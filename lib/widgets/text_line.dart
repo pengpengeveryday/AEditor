@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import '../models/text_settings.dart';
 import '../utils/logger.dart';
 
@@ -38,16 +39,54 @@ class _TextLineState extends State<TextLine> {
     );
   }
 
+  TextSpan _buildTextSpan(String text, TextStyle baseStyle) {
+    if (!widget.isFirstLine) {
+      return TextSpan(text: text, style: baseStyle);
+    }
+
+    // 处理首行
+    String displayText = text;
+    List<TextSpan> children = [];
+
+    // 添加首行空格
+    if (widget.settings.firstLineSpaces > 0) {
+      children.add(TextSpan(
+        text: ' ' * widget.settings.firstLineSpaces,
+        style: baseStyle,
+      ));
+    }
+
+    // 处理首字符大字号
+    if (widget.settings.enlargeFirstLetter && displayText.isNotEmpty) {
+      children.add(TextSpan(
+        text: displayText[0],
+        style: baseStyle.copyWith(
+          fontSize: baseStyle.fontSize! * 1.5,  // 首字符1.5倍大小
+        ),
+      ));
+      if (displayText.length > 1) {
+        children.add(TextSpan(
+          text: displayText.substring(1),
+          style: baseStyle,
+        ));
+      }
+    } else {
+      children.add(TextSpan(
+        text: displayText,
+        style: baseStyle,
+      ));
+    }
+
+    return TextSpan(children: children);
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final textStyle = _getTextStyle();
         final textPainter = TextPainter(
-          text: TextSpan(
-            text: widget.text,
-            style: textStyle,
-          ),
+          text: _buildTextSpan(widget.text, textStyle),
           textDirection: TextDirection.ltr,
           maxLines: 1,
         );
@@ -60,9 +99,9 @@ class _TextLineState extends State<TextLine> {
         
         while (start <= end) {
           int mid = (start + end) ~/ 2;
-          textPainter.text = TextSpan(
-            text: widget.text.substring(0, mid),
-            style: textStyle,
+          textPainter.text = _buildTextSpan(
+            widget.text.substring(0, mid),
+            textStyle,
           );
           textPainter.layout(maxWidth: constraints.maxWidth);
           
@@ -94,14 +133,13 @@ class _TextLineState extends State<TextLine> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: constraints.maxWidth,
-              child: Text(
+            SelectableText.rich(
+              _buildTextSpan(
                 widget.text.substring(0, charsCanFit),
-                style: textStyle,
-                overflow: TextOverflow.clip,
-                softWrap: false,
+                textStyle,
               ),
+              contextMenuBuilder: widget.contextMenuBuilder,
+              maxLines: 1,
             ),
             CustomPaint(
               size: Size(constraints.maxWidth, 3),
