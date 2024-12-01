@@ -118,21 +118,7 @@ class _TextLineState extends State<TextLine> {
         }
         
         final remainingChars = widget.text.length - charsCanFit;
-        final remainingText = widget.text.substring(charsCanFit);
-        
-        Logger.instance.d('Line ${widget.lineNumber}: '
-            'Total chars: ${widget.text.length}, '
-            'Chars displayed: $charsCanFit, '
-            'Remaining chars: $remainingChars, '
-            'Text: ${widget.text.substring(0, charsCanFit)}, '
-            'Remaining text: $remainingText');
-        
-        if (!_hasNotifiedLayout) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            widget.onLineLayout?.call(charsCanFit);
-            _hasNotifiedLayout = true;
-          });
-        }
+        final isLastLine = remainingChars == 0;  // 通过剩余字符判断是否为最后一行
 
         // 计算实际文本的起始和结束位置
         final fullTextPainter = TextPainter(
@@ -152,12 +138,20 @@ class _TextLineState extends State<TextLine> {
             textDirection: TextDirection.ltr,
           );
           spacePainter.layout();
-          _textStartX = spacePainter.width - (widget.settings.firstLineSpaces * 0.5);  // 修正偏差
+          _textStartX = spacePainter.width - (widget.settings.firstLineSpaces * 0.5);
         } else {
           _textStartX = 0;
         }
         
-        _textEndX = fullTextPainter.width;
+        // 设置下划线结束位置
+        _textEndX = isLastLine ? fullTextPainter.width : constraints.maxWidth;
+
+        if (!_hasNotifiedLayout && widget.onLineLayout != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            widget.onLineLayout?.call(charsCanFit);
+            _hasNotifiedLayout = true;
+          });
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
