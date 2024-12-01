@@ -5,6 +5,7 @@ import '../utils/logger.dart';
 import '../model/settings.dart';
 import '../models/text_settings.dart';
 import '../widgets/text_settings_dialog.dart';
+import '../widgets/rich_text.dart';
 
 class TextReader extends StatefulWidget {
   final String filePath;
@@ -141,80 +142,10 @@ class _TextReaderState extends State<TextReader> {
   }
 
   Widget _buildParagraph(String text) {
-    if (text.isEmpty) return const SizedBox.shrink();
-
-    // 处理段落首字符放大
-    if (_textSettings.enlargeFirstLetter) {
-      final firstChar = text[0];
-      final restText = text.substring(1);
-      
-      return Padding(
-        padding: EdgeInsets.only(
-          bottom: _textSettings.paragraphSpacing * 16.0,
-        ),
-        child: SelectableText.rich(
-          TextSpan(
-            children: [
-              // 首行空格
-              if (_textSettings.firstLineSpaces > 0)
-                TextSpan(
-                  text: '　' * _textSettings.firstLineSpaces,
-                  style: TextStyle(
-                    color: _textSettings.textColor,
-                    fontSize: _textSettings.fontSize,
-                    fontFamily: _textSettings.fontFamily,
-                  ),
-                ),
-              // 放大的首字符
-              TextSpan(
-                text: firstChar,
-                style: TextStyle(
-                  color: _textSettings.textColor,
-                  fontSize: _textSettings.fontSize * 1.5,
-                  height: _textSettings.lineHeight,
-                  fontWeight: _textSettings.isBold ? FontWeight.bold : FontWeight.normal,
-                  decoration: _textSettings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
-                  fontFamily: _textSettings.fontFamily,
-                ),
-              ),
-              // 剩余文本
-              TextSpan(
-                text: restText,
-                style: TextStyle(
-                  color: _textSettings.textColor,
-                  fontSize: _textSettings.fontSize,
-                  height: _textSettings.lineHeight,
-                  fontWeight: _textSettings.isBold ? FontWeight.bold : FontWeight.normal,
-                  decoration: _textSettings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
-                  fontFamily: _textSettings.fontFamily,
-                ),
-              ),
-            ],
-          ),
-          contextMenuBuilder: _buildContextMenu,
-        ),
-      );
-    }
-
-    // 普通段落（无首字符放大）
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: _textSettings.paragraphSpacing * 16.0,
-      ),
-      child: SelectableText(
-        _textSettings.firstLineSpaces > 0 
-            ? '　' * _textSettings.firstLineSpaces + text
-            : text,
-        style: TextStyle(
-          color: _textSettings.textColor,
-          fontSize: _textSettings.fontSize,
-          height: _textSettings.lineHeight,
-          fontWeight: _textSettings.isBold ? FontWeight.bold : FontWeight.normal,
-          decoration: _textSettings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
-          fontFamily: _textSettings.fontFamily,
-        ),
-        contextMenuBuilder: _buildContextMenu,
-      ),
+    return ParagraphText(
+      text: text,
+      settings: _textSettings,
+      contextMenuBuilder: _buildContextMenu,
     );
   }
 
