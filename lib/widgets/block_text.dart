@@ -6,12 +6,14 @@ class BlockText extends StatefulWidget {
   final String text;
   final TextSettings settings;
   final Widget Function(BuildContext, EditableTextState)? contextMenuBuilder;
+  final Function(TextSettings)? onSettingsChanged;
 
   const BlockText({
     Key? key,
     required this.text,
     required this.settings,
     this.contextMenuBuilder,
+    this.onSettingsChanged,
   }) : super(key: key);
 
   @override
@@ -48,6 +50,30 @@ class _BlockTextState extends State<BlockText> {
     }
   }
 
+  void _handleSettingsChanged(TextSettings newSettings) {
+    if (widget.onSettingsChanged != null) {
+      widget.onSettingsChanged!(newSettings);
+    }
+  }
+
+  String _processText(String text) {
+    if (text.isEmpty) return text;
+
+    String processedText = text;
+    
+    // 处理首字母大写
+    if (widget.settings.enlargeFirstLetter && text.isNotEmpty) {
+      processedText = text[0].toUpperCase() + text.substring(1);
+    }
+
+    // 处理首行缩进
+    if (widget.settings.firstLineSpaces > 0) {
+      processedText = ' ' * widget.settings.firstLineSpaces + processedText;
+    }
+
+    return processedText;
+  }
+
   @override
   Widget build(BuildContext context) {
     final textStyle = TextStyle(
@@ -58,6 +84,8 @@ class _BlockTextState extends State<BlockText> {
       decoration: TextDecoration.none,
       fontFamily: widget.settings.fontFamily,
     );
+
+    final processedText = _processText(widget.text);
 
     return Container(
       key: _key,
@@ -79,9 +107,13 @@ class _BlockTextState extends State<BlockText> {
               },
             ),
           SelectableText(
-            widget.text,
+            processedText,
             style: textStyle,
-            contextMenuBuilder: widget.contextMenuBuilder,
+            contextMenuBuilder: widget.contextMenuBuilder ?? (context, editableTextState) {
+              return AdaptiveTextSelectionToolbar.editableText(
+                editableTextState: editableTextState,
+              );
+            },
           ),
         ],
       ),
