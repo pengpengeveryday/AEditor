@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/text_settings.dart';
-import 'text_line.dart';
+import '../utils/logger.dart';
 
 class BlockText extends StatefulWidget {
   final String text;
@@ -8,75 +8,56 @@ class BlockText extends StatefulWidget {
   final Widget Function(BuildContext, EditableTextState)? contextMenuBuilder;
 
   const BlockText({
-    super.key,
+    Key? key,
     required this.text,
     required this.settings,
     this.contextMenuBuilder,
-  });
+  }) : super(key: key);
 
   @override
-  State<BlockText> createState() => _BlockTextState();
+  _BlockTextState createState() => _BlockTextState();
 }
 
 class _BlockTextState extends State<BlockText> {
-  final List<String> _lines = [];
-  bool _isLayoutComplete = false;
+  final GlobalKey _key = GlobalKey();
 
-  @override
-  void initState() {
-    super.initState();
-    _lines.add(widget.text);  // 初始时只添加一行
-  }
-
-  void _onLineLayout(int index, int charsUsed) {
-    if (_isLayoutComplete || index >= _lines.length) return;
-    
-    final currentText = _lines[index];
-    if (charsUsed < currentText.length) {
-      setState(() {
-        // 更新当前行
-        _lines[index] = currentText.substring(0, charsUsed);
-        // 添加新行
-        if (index == _lines.length - 1) {
-          _lines.add(currentText.substring(charsUsed));
-        }
-      });
-    } else if (index == _lines.length - 1) {
-      // 最后一行已完全显示，标记布局完成
-      _isLayoutComplete = true;
-    }
+  void _logWidgetSize() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final RenderBox? renderBox = _key.currentContext?.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        final size = renderBox.size;
+        Logger.instance.i('BlockText actual widget size - height: ${size.height}, width: ${size.width}');
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    _logWidgetSize();
+
+    final textStyle = TextStyle(
+      fontSize: widget.settings.fontSize,
+      height: widget.settings.lineHeight,
+      color: widget.settings.textColor,
+      fontWeight: widget.settings.isBold ? FontWeight.bold : FontWeight.normal,
+      decoration: TextDecoration.none,
+      fontFamily: widget.settings.fontFamily,
+    );
+
     return Container(
+      key: _key,
       margin: EdgeInsets.only(bottom: widget.settings.paragraphSpacing * 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: List.generate(_lines.length, (index) {
-          return TextLine(
-            key: ValueKey('line_${widget.text.hashCode}_$index'),
-            text: _lines[index],
-            settings: widget.settings,
-            isFirstLine: index == 0,
-            lineNumber: index + 1,
-            contextMenuBuilder: widget.contextMenuBuilder,
-            onLineLayout: (charsUsed) => _onLineLayout(index, charsUsed),
-          );
-        }),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: widget.settings.textColor.withOpacity(0.3),
+          width: 0.5,
+        ),
+      ),
+      child: SelectableText(
+        widget.text,
+        style: textStyle,
+        contextMenuBuilder: widget.contextMenuBuilder,
       ),
     );
   }
-
-  @override
-  void didUpdateWidget(BlockText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text) {
-      setState(() {
-        _lines.clear();
-        _lines.add(widget.text);
-        _isLayoutComplete = false;
-      });
-    }
-  }
-} 
+}
