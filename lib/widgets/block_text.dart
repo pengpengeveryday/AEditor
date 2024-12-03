@@ -36,8 +36,11 @@ class _BlockTextState extends State<BlockText> {
     final RenderBox? renderBox = _key.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox != null) {
       final size = renderBox.size;
-      final lineHeight = widget.settings.fontSize * widget.settings.lineHeight;
-      final lineCount = (size.height / lineHeight).floor();
+      final firstLineHeight = widget.settings.enlargeFirstLetter
+          ? widget.settings.fontSize * 1.5 * widget.settings.lineHeight
+          : widget.settings.fontSize * widget.settings.lineHeight;
+      final otherLineHeight = widget.settings.fontSize * widget.settings.lineHeight;
+      final lineCount = ((size.height - firstLineHeight) / otherLineHeight).ceil() + 1;
       if (mounted && lineCount != _lineCount) {
         setState(() {
           _lineCount = lineCount;
@@ -45,33 +48,10 @@ class _BlockTextState extends State<BlockText> {
       }
       
       Logger.instance.i('BlockText size - height: ${size.height}, '
-          'line height: $lineHeight, '
+          'first line height: $firstLineHeight, '
+          'other line height: $otherLineHeight, '
           'total lines: $lineCount');
     }
-  }
-
-  void _handleSettingsChanged(TextSettings newSettings) {
-    if (widget.onSettingsChanged != null) {
-      widget.onSettingsChanged!(newSettings);
-    }
-  }
-
-  String _processText(String text) {
-    if (text.isEmpty) return text;
-
-    String processedText = text;
-    
-    // 处理首字母大写
-    if (widget.settings.enlargeFirstLetter && text.isNotEmpty) {
-      processedText = text[0].toUpperCase() + text.substring(1);
-    }
-
-    // 处理首行缩进
-    if (widget.settings.firstLineSpaces > 0) {
-      processedText = ' ' * widget.settings.firstLineSpaces + processedText;
-    }
-
-    return processedText;
   }
 
   @override
@@ -85,11 +65,14 @@ class _BlockTextState extends State<BlockText> {
       fontFamily: widget.settings.fontFamily,
     );
 
-    final processedText = _processText(widget.text);
+    final firstLetterStyle = textStyle.copyWith(
+      fontSize: widget.settings.enlargeFirstLetter ? widget.settings.fontSize * 1.5 : widget.settings.fontSize,
+    );
+
+    final indent = ' ' * widget.settings.firstLineSpaces;
 
     return Container(
       key: _key,
-      margin: EdgeInsets.only(bottom: widget.settings.paragraphSpacing * 16.0),
       child: Stack(
         children: [
           if (widget.settings.hasUnderline && _lineCount > 0)
@@ -98,7 +81,10 @@ class _BlockTextState extends State<BlockText> {
                 return CustomPaint(
                   size: Size(constraints.maxWidth, constraints.maxHeight),
                   painter: DashedUnderlinePainter(
-                    lineHeight: widget.settings.fontSize * widget.settings.lineHeight,
+                    firstLineHeight: widget.settings.enlargeFirstLetter
+                        ? widget.settings.fontSize * 1.5 * widget.settings.lineHeight
+                        : widget.settings.fontSize * widget.settings.lineHeight,
+                    otherLineHeight: widget.settings.fontSize * widget.settings.lineHeight,
                     maxWidth: constraints.maxWidth,
                     color: widget.settings.textColor,
                     lineCount: _lineCount,
@@ -106,9 +92,21 @@ class _BlockTextState extends State<BlockText> {
                 );
               },
             ),
-          SelectableText(
-            processedText,
-            style: textStyle,
+          SelectableText.rich(
+            TextSpan(
+              children: [
+                if (widget.text.isNotEmpty)
+                  TextSpan(
+                    text: indent + widget.text[0],
+                    style: firstLetterStyle,
+                  ),
+                if (widget.text.length > 1)
+                  TextSpan(
+                    text: widget.text.substring(1),
+                    style: textStyle,
+                  ),
+              ],
+            ),
             contextMenuBuilder: widget.contextMenuBuilder ?? (context, editableTextState) {
               return AdaptiveTextSelectionToolbar.editableText(
                 editableTextState: editableTextState,
@@ -122,13 +120,15 @@ class _BlockTextState extends State<BlockText> {
 }
 
 class DashedUnderlinePainter extends CustomPainter {
-  final double lineHeight;
+  final double firstLineHeight;
+  final double otherLineHeight;
   final double maxWidth;
   final Color color;
   final int lineCount;
 
   DashedUnderlinePainter({
-    required this.lineHeight,
+    required this.firstLineHeight,
+    required this.otherLineHeight,
     required this.maxWidth,
     required this.color,
     required this.lineCount,
@@ -144,7 +144,7 @@ class DashedUnderlinePainter extends CustomPainter {
     final linesToDraw = lineCount - 1;
     if (linesToDraw <= 0) return;
 
-    double currentY = lineHeight - 4;
+    double currentY = firstLineHeight - 4;
     double startX = 0;
     while (startX < maxWidth) {
       final dashEndX = (startX + 2).clamp(startX, maxWidth);
@@ -157,7 +157,7 @@ class DashedUnderlinePainter extends CustomPainter {
     }
 
     for (int i = 1; i < linesToDraw; i++) {
-      currentY += lineHeight;
+      currentY += otherLineHeight;
       startX = 0;
       while (startX < maxWidth) {
         final dashEndX = (startX + 2).clamp(startX, maxWidth);
@@ -173,7 +173,8 @@ class DashedUnderlinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(DashedUnderlinePainter oldDelegate) {
-    return lineHeight != oldDelegate.lineHeight ||
+    return firstLineHeight != oldDelegate.firstLineHeight ||
+           otherLineHeight != oldDelegate.otherLineHeight ||
            maxWidth != oldDelegate.maxWidth ||
            color != oldDelegate.color ||
            lineCount != oldDelegate.lineCount;

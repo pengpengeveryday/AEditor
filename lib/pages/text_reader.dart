@@ -65,7 +65,6 @@ class _TextReaderState extends State<TextReader> {
     super.dispose();
   }
 
-  // 处理滚动事件，节流保存
   DateTime _lastSave = DateTime.now();
   void _handleScroll() {
     final now = DateTime.now();
@@ -89,7 +88,6 @@ class _TextReaderState extends State<TextReader> {
         _isLoading = false;
       });
       
-      // 内容加载完成后，恢复阅读进度
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _restoreReadingProgress();
       });
@@ -133,18 +131,27 @@ class _TextReaderState extends State<TextReader> {
           setState(() {
             _textSettings = newSettings;
           });
-          _saveTextSettings();  // 保存设置
+          _saveTextSettings();
         },
       ),
     );
   }
 
-  Widget _buildParagraph(String text) {
-    return BlockText(
-      text: text,
-      settings: _textSettings,  // 传递当前的文本设置
-      contextMenuBuilder: _buildContextMenu,
-    );
+  List<Widget> _buildParagraphs() {
+    final paragraphs = _content.split('\n').where((text) => text.trim().isNotEmpty).toList();
+    Logger.instance.d('Current paragraph spacing: ${_textSettings.paragraphSpacing}');
+    return List.generate(paragraphs.length, (index) {
+      final spacing = (index < paragraphs.length - 1 ? _textSettings.paragraphSpacing * 16.0 : 0).toDouble();
+      Logger.instance.d('Paragraph $index spacing: $spacing');
+      return Padding(
+        padding: EdgeInsets.only(bottom: spacing),
+        child: BlockText(
+          text: paragraphs[index].trim(),
+          settings: _textSettings,
+          contextMenuBuilder: _buildContextMenu,
+        ),
+      );
+    });
   }
 
   Widget _buildContextMenu(BuildContext context, EditableTextState editableTextState) {
@@ -165,12 +172,6 @@ class _TextReaderState extends State<TextReader> {
       anchors: editableTextState.contextMenuAnchors,
       buttonItems: buttonItems,
     );
-  }
-
-  List<Widget> _buildParagraphs() {
-    // 按换行符分割文本
-    final paragraphs = _content.split('\n').where((text) => text.trim().isNotEmpty).toList();
-    return paragraphs.map((text) => _buildParagraph(text.trim())).toList();
   }
 
   @override
@@ -207,7 +208,6 @@ class _TextReaderState extends State<TextReader> {
               await _saveCurrentProgress();
               if (context.mounted) {
                 Navigator.of(context).pop();
-                // 延迟500ms后通知目录浏览页显示内容
                 Future.delayed(const Duration(milliseconds: 500), () {
                   if (mounted) {
                     setState(() {});

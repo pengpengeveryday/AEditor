@@ -174,17 +174,17 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
               ],
             ),
 
-            // 段间距
+            // 段落间距
             Row(
               children: [
-                const Text('段间距', style: TextStyle(color: Colors.white)),
+                const Text('段落间距', style: TextStyle(color: Colors.white)),
                 Expanded(
                   child: Slider(
                     value: _settings.paragraphSpacing,
-                    min: 1.0,
-                    max: 3.0,
-                    divisions: 20,
-                    label: _settings.paragraphSpacing.toStringAsFixed(1),
+                    min: 0.0,
+                    max: 5.0,
+                    divisions: 50,
+                    label: _settings.paragraphSpacing.toString(),
                     onChanged: (value) {
                       setState(() {
                         _settings = _settings.copyWith(paragraphSpacing: value);
