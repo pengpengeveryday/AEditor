@@ -141,20 +141,32 @@ class DashedUnderlinePainter extends CustomPainter {
       ..strokeWidth = 0.5
       ..style = PaintingStyle.stroke;
 
-    // 遍历每一行，除了最后一行
-    for (int i = 0; i < lineCount - 1; i++) {
-      double startX = 0;
-      final y = lineHeight * (i + 1) - 4;  // 将下划线往上移动4个像素
+    final linesToDraw = lineCount - 1;
+    if (linesToDraw <= 0) return;
 
-      // 绘制一行的虚线下划线
+    double currentY = lineHeight - 4;
+    double startX = 0;
+    while (startX < maxWidth) {
+      final dashEndX = (startX + 2).clamp(startX, maxWidth);
+      canvas.drawLine(
+        Offset(startX, currentY),
+        Offset(dashEndX, currentY),
+        paint,
+      );
+      startX += 4;
+    }
+
+    for (int i = 1; i < linesToDraw; i++) {
+      currentY += lineHeight;
+      startX = 0;
       while (startX < maxWidth) {
         final dashEndX = (startX + 2).clamp(startX, maxWidth);
         canvas.drawLine(
-          Offset(startX, y),
-          Offset(dashEndX, y),
+          Offset(startX, currentY),
+          Offset(dashEndX, currentY),
           paint,
         );
-        startX += 4;  // 2像素虚线 + 2像素间隔
+        startX += 4;
       }
     }
   }
