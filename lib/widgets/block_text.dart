@@ -64,11 +64,6 @@ class _BlockTextState extends State<BlockText> {
       margin: EdgeInsets.only(bottom: widget.settings.paragraphSpacing * 16.0),
       child: Stack(
         children: [
-          SelectableText(
-            widget.text,
-            style: textStyle,
-            contextMenuBuilder: widget.contextMenuBuilder,
-          ),
           if (widget.settings.hasUnderline && _lineCount > 0)
             LayoutBuilder(
               builder: (context, constraints) {
@@ -83,6 +78,11 @@ class _BlockTextState extends State<BlockText> {
                 );
               },
             ),
+          SelectableText(
+            widget.text,
+            style: textStyle,
+            contextMenuBuilder: widget.contextMenuBuilder,
+          ),
         ],
       ),
     );
