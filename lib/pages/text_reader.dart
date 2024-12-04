@@ -158,6 +158,16 @@ class _TextReaderState extends State<TextReader> {
     final List<ContextMenuButtonItem> buttonItems = 
       editableTextState.contextMenuButtonItems;
     
+    buttonItems.insert(0, 
+      ContextMenuButtonItem(
+        label: '编辑',
+        onPressed: () {
+          editableTextState.hideToolbar();
+          // TODO: 实现编辑功能
+        },
+      ),
+    );
+    
     buttonItems.add(
       ContextMenuButtonItem(
         label: '设置',
