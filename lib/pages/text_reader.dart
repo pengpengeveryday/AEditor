@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
@@ -25,6 +26,7 @@ class _TextReaderState extends State<TextReader> {
   bool _isLoading = true;
   final ScrollController _scrollController = ScrollController();
   late TextSettings _textSettings;
+  final _globalTapController = StreamController<void>.broadcast();
   
   @override
   void initState() {
@@ -62,6 +64,7 @@ class _TextReaderState extends State<TextReader> {
     Settings.instance.setCurrentReadingTextFile(null);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _scrollController.dispose();
+    _globalTapController.close();
     super.dispose();
   }
 
@@ -149,6 +152,7 @@ class _TextReaderState extends State<TextReader> {
           text: paragraphs[index].trim(),
           settings: _textSettings,
           contextMenuBuilder: _buildContextMenu,
+          onGlobalTap: _globalTapController.stream,
         ),
       );
     });
@@ -186,45 +190,40 @@ class _TextReaderState extends State<TextReader> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (_) {
+        _globalTapController.add(null);
+      },
+      child: Scaffold(
         backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(
-            color: Colors.white,
+        body: SingleChildScrollView(
+          controller: _scrollController,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _buildParagraphs(),
           ),
         ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: _buildParagraphs(),
-        ),
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Opacity(
-          opacity: 0.3,
-          child: FloatingActionButton(
-            mini: true,
-            backgroundColor: Colors.grey,
-            child: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              await _saveCurrentProgress();
-              if (context.mounted) {
-                Navigator.of(context).pop();
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  if (mounted) {
-                    setState(() {});
-                  }
-                });
-              }
-            },
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Opacity(
+            opacity: 0.3,
+            child: FloatingActionButton(
+              mini: true,
+              backgroundColor: Colors.grey,
+              child: const Icon(Icons.arrow_back),
+              onPressed: () async {
+                await _saveCurrentProgress();
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    if (mounted) {
+                      setState(() {});
+                    }
+                  });
+                }
+              },
+            ),
           ),
         ),
       ),
