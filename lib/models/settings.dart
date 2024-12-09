@@ -8,6 +8,7 @@ class Settings {
   static const String _currentReadingTextFileKey = 'current_reading_text_file';
   static const String _readingProgressKey = 'reading_progress';
   static const String _textSettingsKey = 'global_text_settings';
+  static const String _allowEditingKey = 'allow_editing';
   
   static Settings? _instance;
   late SharedPreferences _prefs;
@@ -131,5 +132,20 @@ class Settings {
     } catch (e) {
       Logger.instance.e('Failed to clear text settings', e);
     }
+  }
+
+  // 保存 allowEditing 设置
+  Future<void> saveAllowEditing(bool allowEditing) async {
+    try {
+      await _prefs.setBool(_allowEditingKey, allowEditing);
+      Logger.instance.d('Saved allow editing setting: $allowEditing');
+    } catch (e) {
+      Logger.instance.e('Failed to save allow editing setting', e);
+    }
+  }
+
+  // 获取 allowEditing 设置
+  bool get allowEditing {
+    return _prefs.getBool(_allowEditingKey) ?? true; // 默认值为 true
   }
 } 

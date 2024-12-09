@@ -11,6 +11,7 @@ class TextSettings {
   double paragraphSpacing;
   bool hasUnderline;
   String? fontFamily;
+  final bool allowEditing;
 
   TextSettings({
     this.fontSize = 16,
@@ -23,6 +24,7 @@ class TextSettings {
     this.paragraphSpacing = 1.0,
     this.hasUnderline = false,
     this.fontFamily,
+    this.allowEditing = true,
   });
 
   factory TextSettings.fromJson(Map<String, dynamic> json) {
@@ -37,6 +39,7 @@ class TextSettings {
       paragraphSpacing: json['paragraphSpacing']?.toDouble() ?? 1.0,
       hasUnderline: json['hasUnderline'] ?? false,
       fontFamily: json['fontFamily'],
+      allowEditing: json['allowEditing'] ?? true,
     );
   }
 
@@ -52,6 +55,7 @@ class TextSettings {
       'paragraphSpacing': paragraphSpacing,
       'hasUnderline': hasUnderline,
       'fontFamily': fontFamily,
+      'allowEditing': allowEditing,
     };
   }
 
@@ -66,6 +70,7 @@ class TextSettings {
     double? paragraphSpacing,
     bool? hasUnderline,
     String? fontFamily,
+    bool? allowEditing,
   }) {
     return TextSettings(
       fontSize: fontSize ?? this.fontSize,
@@ -78,6 +83,7 @@ class TextSettings {
       paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
       hasUnderline: hasUnderline ?? this.hasUnderline,
       fontFamily: fontFamily ?? this.fontFamily,
+      allowEditing: allowEditing ?? this.allowEditing,
     );
   }
 } 

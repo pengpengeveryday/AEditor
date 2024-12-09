@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import '../models/text_settings.dart';
 import '../utils/logger.dart';
 
@@ -23,13 +24,37 @@ class BlockText extends StatefulWidget {
 class _BlockTextState extends State<BlockText> {
   final GlobalKey _key = GlobalKey();
   int _lineCount = 0;
+  bool _isEditing = false;
+  late TextEditingController _editingController;
 
   @override
   void initState() {
     super.initState();
+    _editingController = TextEditingController(text: widget.text);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _logWidgetSize();
     });
+  }
+
+  @override
+  void dispose() {
+    _editingController.dispose();
+    super.dispose();
+  }
+
+  void _startEditing() {
+    if (widget.settings.allowEditing) {
+      setState(() {
+        _isEditing = true;
+      });
+    }
+  }
+
+  void _stopEditing() {
+    setState(() {
+      _isEditing = false;
+    });
+    // TODO: 处理文本改的回调
   }
 
   void _logWidgetSize() {
@@ -105,6 +130,18 @@ class _BlockTextState extends State<BlockText> {
                     text: widget.text.substring(1),
                     style: textStyle,
                   ),
+                if (widget.settings.allowEditing)
+                  TextSpan(
+                    text: ' 编辑',
+                    style: textStyle.copyWith(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () {
+                        _startEditing();
+                      },
+                  ),
               ],
             ),
             contextMenuBuilder: widget.contextMenuBuilder ?? (context, editableTextState) {
@@ -113,6 +150,29 @@ class _BlockTextState extends State<BlockText> {
               );
             },
           ),
+          if (widget.settings.allowEditing && _isEditing)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: TextField(
+                controller: _editingController,
+                style: textStyle,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: widget.settings.textColor),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: widget.settings.textColor.withOpacity(0.5)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: widget.settings.textColor),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+                maxLines: null,
+                onSubmitted: (_) => _stopEditing(),
+                onEditingComplete: _stopEditing,
+              ),
+            ),
         ],
       ),
     );

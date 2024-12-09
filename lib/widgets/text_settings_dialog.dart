@@ -209,6 +209,19 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
               },
             ),
 
+            // 允许编辑
+            SwitchListTile(
+              title: const Text('允许编辑',
+                  style: TextStyle(color: Colors.white)),
+              value: _settings.allowEditing,
+              onChanged: (value) {
+                setState(() {
+                  _settings = _settings.copyWith(allowEditing: value);
+                  widget.onSettingsChanged(_settings);
+                });
+              },
+            ),
+
             // 字体选择
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,7 +331,7 @@ class SimpleColorPicker extends StatelessWidget {
     ];
 
     return AlertDialog(
-      title: const Text('选择颜色', style: TextStyle(color: Colors.white)),
+      title: const Text('���择颜色', style: TextStyle(color: Colors.white)),
       backgroundColor: Colors.black87,
       content: Wrap(
         spacing: 8,
