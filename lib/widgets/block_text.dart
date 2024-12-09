@@ -62,8 +62,49 @@ class _BlockTextState extends State<BlockText> {
   void _onFocusChange() {
     Logger.instance.d('BlockText: Focus changed, hasFocus: ${_focusNode.hasFocus}');
     if (!_focusNode.hasFocus && _isEditing) {
-      _stopEditing();
+      _confirmExitEditMode();
     }
+  }
+
+  Future<void> _confirmExitEditMode() async {
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('保存更改?'),
+          content: Text('您想保存对文本的更改吗？'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);  // 不保存
+              },
+              child: Text('否'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);  // 保存
+              },
+              child: Text('是'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldSave == true) {
+      // 直接从编辑框获取文本并更新
+      final newText = _editingController.text;
+      if (widget.onTextChanged != null) {
+        widget.onTextChanged!(newText);
+      }
+    } else {
+      // 丢弃更改，恢复原文本
+      _editingController.text = widget.text;
+    }
+
+    setState(() {
+      _isEditing = false;
+    });
   }
 
   void _startEditing() {
@@ -124,100 +165,109 @@ class _BlockTextState extends State<BlockText> {
 
     final indent = ' ' * widget.settings.firstLineSpaces;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () {
-        Logger.instance.d('BlockText: Tap detected.');
+    return WillPopScope(
+      onWillPop: () async {
         if (_isEditing) {
-          FocusScope.of(context).unfocus();
-          _stopEditing();
+          await _confirmExitEditMode();
+          return false;
         }
+        return true;
       },
-      child: Container(
-        key: _key,
-        child: Stack(
-          children: [
-            if (!_isEditing)
-              Stack(
-                children: [
-                  if (widget.settings.hasUnderline && _lineCount > 0)
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        return CustomPaint(
-                          size: Size(constraints.maxWidth, constraints.maxHeight),
-                          painter: DashedUnderlinePainter(
-                            firstLineHeight: widget.settings.enlargeFirstLetter
-                                ? widget.settings.fontSize * 1.5 * widget.settings.lineHeight
-                                : widget.settings.fontSize * widget.settings.lineHeight,
-                            otherLineHeight: widget.settings.fontSize * widget.settings.lineHeight,
-                            maxWidth: constraints.maxWidth,
-                            color: widget.settings.textColor,
-                            lineCount: _lineCount,
-                          ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
+          Logger.instance.d('BlockText: Tap detected.');
+          if (_isEditing) {
+            FocusScope.of(context).unfocus();
+            _confirmExitEditMode();
+          }
+        },
+        child: Container(
+          key: _key,
+          child: Stack(
+            children: [
+              if (!_isEditing)
+                Stack(
+                  children: [
+                    if (widget.settings.hasUnderline && _lineCount > 0)
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          return CustomPaint(
+                            size: Size(constraints.maxWidth, constraints.maxHeight),
+                            painter: DashedUnderlinePainter(
+                              firstLineHeight: widget.settings.enlargeFirstLetter
+                                  ? widget.settings.fontSize * 1.5 * widget.settings.lineHeight
+                                  : widget.settings.fontSize * widget.settings.lineHeight,
+                              otherLineHeight: widget.settings.fontSize * widget.settings.lineHeight,
+                              maxWidth: constraints.maxWidth,
+                              color: widget.settings.textColor,
+                              lineCount: _lineCount,
+                            ),
+                          );
+                        },
+                      ),
+                    SelectableText.rich(
+                      TextSpan(
+                        children: [
+                          if (widget.text.isNotEmpty)
+                            TextSpan(
+                              text: indent + widget.text[0],
+                              style: firstLetterStyle,
+                            ),
+                          if (widget.text.length > 1)
+                            TextSpan(
+                              text: widget.text.substring(1),
+                              style: textStyle,
+                            ),
+                          if (widget.settings.allowEditing)
+                            TextSpan(
+                              text: ' 编辑',
+                              style: textStyle.copyWith(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = _startEditing,
+                            ),
+                        ],
+                      ),
+                      contextMenuBuilder: widget.contextMenuBuilder ?? (context, editableTextState) {
+                        return AdaptiveTextSelectionToolbar.editableText(
+                          editableTextState: editableTextState,
                         );
                       },
                     ),
-                  SelectableText.rich(
-                    TextSpan(
-                      children: [
-                        if (widget.text.isNotEmpty)
-                          TextSpan(
-                            text: indent + widget.text[0],
-                            style: firstLetterStyle,
-                          ),
-                        if (widget.text.length > 1)
-                          TextSpan(
-                            text: widget.text.substring(1),
-                            style: textStyle,
-                          ),
-                        if (widget.settings.allowEditing)
-                          TextSpan(
-                            text: ' 编辑',
-                            style: textStyle.copyWith(
-                              color: Colors.blue,
-                              decoration: TextDecoration.underline,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = _startEditing,
-                          ),
-                      ],
-                    ),
-                    contextMenuBuilder: widget.contextMenuBuilder ?? (context, editableTextState) {
-                      return AdaptiveTextSelectionToolbar.editableText(
-                        editableTextState: editableTextState,
-                      );
-                    },
-                  ),
-                ],
-              ),
-            if (_isEditing)
-              GestureDetector(
-                onTap: () {
-                  Logger.instance.d('BlockText: TextField tapped.');
-                },
-                child: TextField(
-                  controller: _editingController,
-                  focusNode: _focusNode,
-                  style: textStyle,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: widget.settings.textColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: widget.settings.textColor.withOpacity(0.5)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: widget.settings.textColor),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                  maxLines: null,
-                  autofocus: true,
-                  onSubmitted: (_) => _stopEditing(),
-                  onEditingComplete: _stopEditing,
+                  ],
                 ),
-              ),
-          ],
+              if (_isEditing)
+                GestureDetector(
+                  onTap: () {
+                    Logger.instance.d('BlockText: TextField tapped.');
+                  },
+                  child: TextField(
+                    controller: _editingController,
+                    focusNode: _focusNode,
+                    style: textStyle,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: widget.settings.textColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: widget.settings.textColor.withOpacity(0.5)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: widget.settings.textColor),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    ),
+                    maxLines: null,
+                    autofocus: true,
+                    onSubmitted: (_) => _stopEditing(),
+                    onEditingComplete: _stopEditing,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
