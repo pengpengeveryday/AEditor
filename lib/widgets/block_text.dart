@@ -121,9 +121,16 @@ class _BlockTextState extends State<BlockText> {
 
   void _startEditing() {
     if (widget.settings.allowEditing) {
+      _editingController = TextEditingController(text: widget.text);
+      
       setState(() {
         _isEditing = true;
         Logger.instance.d('BlockText: Entering edit mode.');
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        FocusScope.of(context).requestFocus(_focusNode);
+        Logger.instance.d('BlockText: Requesting focus in next frame');
       });
     }
   }
@@ -132,6 +139,9 @@ class _BlockTextState extends State<BlockText> {
     if (widget.onTextChanged != null) {
       widget.onTextChanged!(_editingController.text);
     }
+    
+    _editingController.dispose();
+    
     setState(() {
       _isEditing = false;
       Logger.instance.d('BlockText: Exiting edit mode.');
@@ -256,32 +266,43 @@ class _BlockTextState extends State<BlockText> {
                   onTap: () {
                     Logger.instance.d('BlockText: TextField tapped.');
                   },
-                  child: TextField(
-                    controller: _editingController,
-                    focusNode: _focusNode,
-                    style: textStyle,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(color: widget.settings.textColor),
+                  child: Container(
+                    color: Colors.black,
+                    child: TextField(
+                      controller: _editingController,
+                      focusNode: _focusNode,
+                      style: textStyle.copyWith(
+                        color: widget.settings.textColor,
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: widget.settings.textColor.withOpacity(0.5)),
+                      cursorColor: widget.settings.textColor,
+                      cursorWidth: 2.0,
+                      showCursor: true,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: widget.settings.textColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: widget.settings.textColor.withOpacity(0.5)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: widget.settings.textColor),
+                        ),
+                        fillColor: Colors.transparent,
+                        filled: true,
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: widget.settings.textColor),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      maxLines: null,
+                      autofocus: true,
+                      onSubmitted: (text) {
+                        Logger.instance.d('BlockText: TextField submitted with text: $text');
+                        _stopEditing();
+                      },
+                      onEditingComplete: () {
+                        Logger.instance.d('BlockText: TextField editing completed');
+                        _stopEditing();
+                      },
                     ),
-                    maxLines: null,
-                    autofocus: true,
-                    onSubmitted: (text) {
-                      Logger.instance.d('BlockText: TextField submitted with text: $text');
-                      _stopEditing();
-                    },
-                    onEditingComplete: () {
-                      Logger.instance.d('BlockText: TextField editing completed');
-                      _stopEditing();
-                    },
                   ),
                 ),
             ],
