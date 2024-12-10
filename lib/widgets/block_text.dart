@@ -33,6 +33,7 @@ class _BlockTextState extends State<BlockText> {
   late TextEditingController _editingController;
   StreamSubscription? _tapSubscription;
   final FocusNode _focusNode = FocusNode();
+  bool _isExiting = false;
 
   @override
   void initState() {
@@ -61,14 +62,16 @@ class _BlockTextState extends State<BlockText> {
 
   void _onFocusChange() {
     Logger.instance.d('BlockText: Focus changed, hasFocus: ${_focusNode.hasFocus}');
-    if (!_focusNode.hasFocus && _isEditing) {
+    if (!_focusNode.hasFocus && _isEditing && !_isExiting) {
       Logger.instance.d('BlockText: Lost focus while editing, triggering exit edit mode');
       _confirmExitEditMode();
     }
   }
 
   Future<void> _confirmExitEditMode() async {
-    Logger.instance.d('BlockText: Starting _confirmExitEditMode');
+    if (_isExiting) return;
+    _isExiting = true;
+    
     try {
       final shouldSave = await showDialog<bool>(
         context: context,
@@ -80,14 +83,12 @@ class _BlockTextState extends State<BlockText> {
             actions: <Widget>[
               TextButton(
                 onPressed: () {
-                  Logger.instance.d('BlockText: Dialog - chose not to save');
                   Navigator.of(context).pop(false);
                 },
                 child: Text('否'),
               ),
               TextButton(
                 onPressed: () {
-                  Logger.instance.d('BlockText: Dialog - chose to save');
                   Navigator.of(context).pop(true);
                 },
                 child: Text('是'),
@@ -97,25 +98,20 @@ class _BlockTextState extends State<BlockText> {
         },
       );
 
-      Logger.instance.d('BlockText: Dialog result - shouldSave: $shouldSave');
-
       if (shouldSave == true) {
         final newText = _editingController.text;
-        Logger.instance.d('BlockText: Saving new text: $newText');
         if (widget.onTextChanged != null) {
           widget.onTextChanged!(newText);
         }
-      } else if (shouldSave == false) {
-        Logger.instance.d('BlockText: Discarding changes');
+      } else {
         _editingController.text = widget.text;
       }
 
       setState(() {
         _isEditing = false;
-        Logger.instance.d('BlockText: Set editing state to false');
       });
-    } catch (e) {
-      Logger.instance.d('BlockText: Error in _confirmExitEditMode: $e');
+    } finally {
+      _isExiting = false;
     }
   }
 
@@ -190,6 +186,8 @@ class _BlockTextState extends State<BlockText> {
     return WillPopScope(
       onWillPop: () async {
         if (_isEditing) {
+          if (!mounted || !_isEditing) return false;
+          
           await _confirmExitEditMode();
           return false;
         }
