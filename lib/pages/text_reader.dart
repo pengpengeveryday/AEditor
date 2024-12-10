@@ -162,9 +162,7 @@ class _TextReaderState extends State<TextReader> {
           contextMenuBuilder: _buildContextMenu,
           onGlobalTap: _globalTapController.stream,
           onTextChanged: (String newText) {
-            Logger.instance.d('TextReader: Received text change for paragraph $index');
-            Logger.instance.d('TextReader: Old text: ${paragraphs[index]}');
-            Logger.instance.d('TextReader: New text: $newText');
+            Logger.instance.d('TextReader: Updating paragraph content');
             
             // 更新段落内容
             setState(() {

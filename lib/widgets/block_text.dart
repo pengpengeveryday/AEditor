@@ -73,6 +73,8 @@ class _BlockTextState extends State<BlockText> {
     _isExiting = true;
     
     try {
+      FocusScope.of(context).unfocus();
+
       final shouldSave = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -110,6 +112,7 @@ class _BlockTextState extends State<BlockText> {
       setState(() {
         _isEditing = false;
       });
+
     } finally {
       _isExiting = false;
     }
@@ -166,6 +169,49 @@ class _BlockTextState extends State<BlockText> {
     }
   }
 
+  Future<void> _handleGestureExit() async {
+    if (_isEditing) {
+      FocusScope.of(context).unfocus();
+      
+      final currentText = _editingController.text;
+      
+      setState(() {
+        _isEditing = false;
+      });
+      
+      final shouldSave = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('保存更改?'),
+            content: Text('您想保存对文本的更改吗？'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(false);
+                },
+                child: Text('否'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(true);
+                },
+                child: Text('是'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (shouldSave == true && widget.onTextChanged != null) {
+        widget.onTextChanged!(currentText);
+      }
+      
+      _editingController.dispose();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final textStyle = TextStyle(
@@ -187,8 +233,7 @@ class _BlockTextState extends State<BlockText> {
       onWillPop: () async {
         if (_isEditing) {
           if (!mounted || !_isEditing) return false;
-          
-          await _confirmExitEditMode();
+          await _handleGestureExit();
           return false;
         }
         return true;
@@ -293,7 +338,7 @@ class _BlockTextState extends State<BlockText> {
                       maxLines: null,
                       autofocus: true,
                       onSubmitted: (text) {
-                        Logger.instance.d('BlockText: TextField submitted with text: $text');
+                        Logger.instance.d('BlockText: TextField submitted');
                         _stopEditing();
                       },
                       onEditingComplete: () {
