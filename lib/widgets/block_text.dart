@@ -75,6 +75,13 @@ class _BlockTextState extends State<BlockText> {
     try {
       FocusScope.of(context).unfocus();
 
+      if (_editingController.text == widget.text) {
+        setState(() {
+          _isEditing = false;
+        });
+        return;
+      }
+
       final shouldSave = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -100,11 +107,8 @@ class _BlockTextState extends State<BlockText> {
         },
       );
 
-      if (shouldSave == true) {
-        final newText = _editingController.text;
-        if (widget.onTextChanged != null) {
-          widget.onTextChanged!(newText);
-        }
+      if (shouldSave == true && widget.onTextChanged != null) {
+        widget.onTextChanged!(_editingController.text);
       } else {
         _editingController.text = widget.text;
       }
@@ -171,44 +175,22 @@ class _BlockTextState extends State<BlockText> {
 
   Future<void> _handleGestureExit() async {
     if (_isEditing) {
-      FocusScope.of(context).unfocus();
-      
       final currentText = _editingController.text;
       
+      if (currentText == widget.text) {
+        FocusScope.of(context).unfocus();
+        setState(() {
+          _isEditing = false;
+        });
+        _editingController.dispose();
+        return;
+      }
+
+      FocusScope.of(context).unfocus();
       setState(() {
         _isEditing = false;
       });
-      
-      final shouldSave = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('保存更改?'),
-            content: Text('您想保存对文本的更改吗？'),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(false);
-                },
-                child: Text('否'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(true);
-                },
-                child: Text('是'),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (shouldSave == true && widget.onTextChanged != null) {
-        widget.onTextChanged!(currentText);
-      }
-      
-      _editingController.dispose();
+      await _confirmExitEditMode();
     }
   }
 
