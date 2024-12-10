@@ -62,49 +62,61 @@ class _BlockTextState extends State<BlockText> {
   void _onFocusChange() {
     Logger.instance.d('BlockText: Focus changed, hasFocus: ${_focusNode.hasFocus}');
     if (!_focusNode.hasFocus && _isEditing) {
+      Logger.instance.d('BlockText: Lost focus while editing, triggering exit edit mode');
       _confirmExitEditMode();
     }
   }
 
   Future<void> _confirmExitEditMode() async {
-    final shouldSave = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('保存更改?'),
-          content: Text('您想保存对文本的更改吗？'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(false);  // 不保存
-              },
-              child: Text('否'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);  // 保存
-              },
-              child: Text('是'),
-            ),
-          ],
-        );
-      },
-    );
+    Logger.instance.d('BlockText: Starting _confirmExitEditMode');
+    try {
+      final shouldSave = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('保存更改?'),
+            content: Text('您想保存对文本的更改吗？'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Logger.instance.d('BlockText: Dialog - chose not to save');
+                  Navigator.of(context).pop(false);
+                },
+                child: Text('否'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Logger.instance.d('BlockText: Dialog - chose to save');
+                  Navigator.of(context).pop(true);
+                },
+                child: Text('是'),
+              ),
+            ],
+          );
+        },
+      );
 
-    if (shouldSave == true) {
-      // 直接从编辑框获取文本并更新
-      final newText = _editingController.text;
-      if (widget.onTextChanged != null) {
-        widget.onTextChanged!(newText);
+      Logger.instance.d('BlockText: Dialog result - shouldSave: $shouldSave');
+
+      if (shouldSave == true) {
+        final newText = _editingController.text;
+        Logger.instance.d('BlockText: Saving new text: $newText');
+        if (widget.onTextChanged != null) {
+          widget.onTextChanged!(newText);
+        }
+      } else if (shouldSave == false) {
+        Logger.instance.d('BlockText: Discarding changes');
+        _editingController.text = widget.text;
       }
-    } else {
-      // 丢弃更改，恢复原文本
-      _editingController.text = widget.text;
-    }
 
-    setState(() {
-      _isEditing = false;
-    });
+      setState(() {
+        _isEditing = false;
+        Logger.instance.d('BlockText: Set editing state to false');
+      });
+    } catch (e) {
+      Logger.instance.d('BlockText: Error in _confirmExitEditMode: $e');
+    }
   }
 
   void _startEditing() {
@@ -262,8 +274,14 @@ class _BlockTextState extends State<BlockText> {
                     ),
                     maxLines: null,
                     autofocus: true,
-                    onSubmitted: (_) => _stopEditing(),
-                    onEditingComplete: _stopEditing,
+                    onSubmitted: (text) {
+                      Logger.instance.d('BlockText: TextField submitted with text: $text');
+                      _stopEditing();
+                    },
+                    onEditingComplete: () {
+                      Logger.instance.d('BlockText: TextField editing completed');
+                      _stopEditing();
+                    },
                   ),
                 ),
             ],

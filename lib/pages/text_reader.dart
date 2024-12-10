@@ -142,10 +142,8 @@ class _TextReaderState extends State<TextReader> {
 
   List<Widget> _buildParagraphs() {
     final paragraphs = _content.split('\n').where((text) => text.trim().isNotEmpty).toList();
-    Logger.instance.d('Current paragraph spacing: ${_textSettings.paragraphSpacing}');
     return List.generate(paragraphs.length, (index) {
       final spacing = (index < paragraphs.length - 1 ? _textSettings.paragraphSpacing * 16.0 : 0).toDouble();
-      Logger.instance.d('Paragraph $index spacing: $spacing');
       return Padding(
         padding: EdgeInsets.only(bottom: spacing),
         child: BlockText(
@@ -153,6 +151,17 @@ class _TextReaderState extends State<TextReader> {
           settings: _textSettings,
           contextMenuBuilder: _buildContextMenu,
           onGlobalTap: _globalTapController.stream,
+          onTextChanged: (String newText) {
+            Logger.instance.d('TextReader: Received text change for paragraph $index');
+            Logger.instance.d('TextReader: Old text: ${paragraphs[index]}');
+            Logger.instance.d('TextReader: New text: $newText');
+            
+            // 更新段落内容
+            setState(() {
+              paragraphs[index] = newText;
+              _content = paragraphs.join('\n');
+            });
+          },
         ),
       );
     });
