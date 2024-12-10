@@ -140,6 +140,16 @@ class _TextReaderState extends State<TextReader> {
     );
   }
 
+  Future<void> _saveContentToFile() async {
+    try {
+      final file = File(widget.filePath);
+      await file.writeAsString(_content);
+      Logger.instance.d('TextReader: Content saved to file: ${widget.filePath}');
+    } catch (e) {
+      Logger.instance.e('TextReader: Error saving file content', e);
+    }
+  }
+
   List<Widget> _buildParagraphs() {
     final paragraphs = _content.split('\n').where((text) => text.trim().isNotEmpty).toList();
     return List.generate(paragraphs.length, (index) {
@@ -161,6 +171,9 @@ class _TextReaderState extends State<TextReader> {
               paragraphs[index] = newText;
               _content = paragraphs.join('\n');
             });
+
+            // 保存到文件
+            _saveContentToFile();
           },
         ),
       );
