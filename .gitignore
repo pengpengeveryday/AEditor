@@ -73,3 +73,4 @@ app.*.map.json
 /macos/.symlinks/
 /macos/profile
 /macos/xcuserdata
+.gradle

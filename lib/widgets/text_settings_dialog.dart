@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/text_settings.dart';  // 导入 TextSettings
+import '../utils/logger.dart'; // 导入 Logger
 
 class TextSettingsDialog extends StatefulWidget {
   final TextSettings initialSettings;
@@ -48,6 +49,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                       setState(() {
                         _settings = _settings.copyWith(fontSize: value);
                         widget.onSettingsChanged(_settings);
+                        Logger.instance.d('TextSettingsDialog: Settings changed');
                       });
                     },
                   ),
@@ -70,6 +72,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                           setState(() {
                             _settings = _settings.copyWith(textColor: color);
                             widget.onSettingsChanged(_settings);
+                            Logger.instance.d('TextSettingsDialog: Settings changed');
                           });
                         },
                       ),
@@ -110,6 +113,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                           firstLineSpaces: newSelection.first,
                         );
                         widget.onSettingsChanged(_settings);
+                        Logger.instance.d('TextSettingsDialog: Settings changed');
                       });
                     },
                     style: ButtonStyle(
@@ -136,6 +140,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                 setState(() {
                   _settings = _settings.copyWith(enlargeFirstLetter: value);
                   widget.onSettingsChanged(_settings);
+                  Logger.instance.d('TextSettingsDialog: Settings changed');
                 });
               },
             ),
@@ -148,6 +153,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                 setState(() {
                   _settings = _settings.copyWith(isBold: value);
                   widget.onSettingsChanged(_settings);
+                  Logger.instance.d('TextSettingsDialog: Settings changed');
                 });
               },
             ),
@@ -167,6 +173,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                       setState(() {
                         _settings = _settings.copyWith(lineHeight: value);
                         widget.onSettingsChanged(_settings);
+                        Logger.instance.d('TextSettingsDialog: Settings changed');
                       });
                     },
                   ),
@@ -189,6 +196,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                       setState(() {
                         _settings = _settings.copyWith(paragraphSpacing: value);
                         widget.onSettingsChanged(_settings);
+                        Logger.instance.d('TextSettingsDialog: Settings changed');
                       });
                     },
                   ),
@@ -205,6 +213,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                 setState(() {
                   _settings = _settings.copyWith(hasUnderline: value);
                   widget.onSettingsChanged(_settings);
+                  Logger.instance.d('TextSettingsDialog: Settings changed');
                 });
               },
             ),
@@ -218,6 +227,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                 setState(() {
                   _settings = _settings.copyWith(allowEditing: value);
                   widget.onSettingsChanged(_settings);
+                  Logger.instance.d('TextSettingsDialog: Settings changed');
                 });
               },
             ),
@@ -240,6 +250,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                           setState(() {
                             _settings = _settings.copyWith(fontFamily: null);
                             widget.onSettingsChanged(_settings);
+                            Logger.instance.d('TextSettingsDialog: Settings changed');
                           });
                         }
                       },
@@ -252,6 +263,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                           setState(() {
                             _settings = _settings.copyWith(fontFamily: 'SongTi');
                             widget.onSettingsChanged(_settings);
+                            Logger.instance.d('TextSettingsDialog: Settings changed');
                           });
                         }
                       },
@@ -264,6 +276,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                           setState(() {
                             _settings = _settings.copyWith(fontFamily: 'YouYuan');
                             widget.onSettingsChanged(_settings);
+                            Logger.instance.d('TextSettingsDialog: Settings changed');
                           });
                         }
                       },
@@ -276,6 +289,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                           setState(() {
                             _settings = _settings.copyWith(fontFamily: 'FZXiaoHei');
                             widget.onSettingsChanged(_settings);
+                            Logger.instance.d('TextSettingsDialog: Settings changed');
                           });
                         }
                       },
@@ -288,6 +302,7 @@ class _TextSettingsDialogState extends State<TextSettingsDialog> {
                           setState(() {
                             _settings = _settings.copyWith(fontFamily: 'KaiShu');
                             widget.onSettingsChanged(_settings);
+                            Logger.instance.d('TextSettingsDialog: Settings changed');
                           });
                         }
                       },
@@ -331,7 +346,7 @@ class SimpleColorPicker extends StatelessWidget {
     ];
 
     return AlertDialog(
-      title: const Text('���择颜色', style: TextStyle(color: Colors.white)),
+      title: const Text('选择颜色', style: TextStyle(color: Colors.white)),
       backgroundColor: Colors.black87,
       content: Wrap(
         spacing: 8,

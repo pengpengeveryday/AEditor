@@ -31,6 +31,7 @@ class _TextReaderState extends State<TextReader> {
   @override
   void initState() {
     super.initState();
+    _textSettings = TextSettings();
     _loadTextSettings();
     _loadContent();
     _saveReadingFile();
@@ -133,6 +134,7 @@ class _TextReaderState extends State<TextReader> {
         onSettingsChanged: (newSettings) {
           setState(() {
             _textSettings = newSettings;
+            Logger.instance.d('TextReader: Settings updated');
           });
           _saveTextSettings();
         },
@@ -153,27 +155,30 @@ class _TextReaderState extends State<TextReader> {
   List<Widget> _buildParagraphs() {
     final paragraphs = _content.split('\n').where((text) => text.trim().isNotEmpty).toList();
     return List.generate(paragraphs.length, (index) {
-      final spacing = (index < paragraphs.length - 1 ? _textSettings.paragraphSpacing * 16.0 : 0).toDouble();
-      return Padding(
-        padding: EdgeInsets.only(bottom: spacing),
-        child: BlockText(
-          text: paragraphs[index].trim(),
-          settings: _textSettings,
-          contextMenuBuilder: _buildContextMenu,
-          onGlobalTap: _globalTapController.stream,
-          onTextChanged: (String newText) {
-            Logger.instance.d('TextReader: Updating paragraph content');
-            
-            // 更新段落内容
-            setState(() {
-              paragraphs[index] = newText;
-              _content = paragraphs.join('\n');
-            });
+      return BlockText(
+        text: paragraphs[index].trim(),
+        settings: _textSettings,
+        onSettingsChanged: (newSettings) {
+          setState(() {
+            _textSettings = newSettings;
+            Logger.instance.d('TextReader: Settings updated from BlockText');
+          });
+          _saveTextSettings();
+        },
+        contextMenuBuilder: _buildContextMenu,
+        onGlobalTap: _globalTapController.stream,
+        onTextChanged: (String newText) {
+          Logger.instance.d('TextReader: Updating paragraph content');
+          
+          // 更新段落内容
+          setState(() {
+            paragraphs[index] = newText;
+            _content = paragraphs.join('\n');
+          });
 
-            // 保存到文件
-            _saveContentToFile();
-          },
-        ),
+          // 保存到文件
+          _saveContentToFile();
+        },
       );
     });
   }
