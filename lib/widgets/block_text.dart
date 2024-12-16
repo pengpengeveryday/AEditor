@@ -35,6 +35,8 @@ class _BlockTextState extends State<BlockText> {
   StreamSubscription? _tapSubscription;
   final FocusNode _focusNode = FocusNode();
   bool _isExiting = false;
+  String? _pendingText;
+  bool _showedDialog = false;
 
   @override
   void initState() {
@@ -45,44 +47,123 @@ class _BlockTextState extends State<BlockText> {
       _logWidgetSize();
     });
     _tapSubscription = widget.onGlobalTap?.listen((_) {
-      if (_isEditing) {
-        Logger.instance.d('BlockText: Global tap detected, exiting edit mode.');
-        _stopEditing();
+      if (_isEditing && !_isExiting) {
+        Logger.instance.d('BlockText: Global tap detected, triggering confirm exit mode.');
+        _confirmExitEditMode();
       }
     });
   }
 
   @override
   void dispose() {
+    _tapSubscription?.cancel();
     _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     _editingController.dispose();
-    _tapSubscription?.cancel();
     super.dispose();
   }
 
   void _onFocusChange() {
     Logger.instance.d('BlockText: Focus changed, hasFocus: ${_focusNode.hasFocus}');
     if (!_focusNode.hasFocus && _isEditing && !_isExiting) {
-      Logger.instance.d('BlockText: Lost focus while editing, triggering exit edit mode');
-      _confirmExitEditMode();
+      Logger.instance.d('BlockText: Lost focus while editing, but letting global tap handle it');
     }
   }
 
   Future<void> _confirmExitEditMode() async {
-    if (_isExiting) return;
+    if (_isExiting) {
+      Logger.instance.d('BlockText: Already exiting, skip confirm dialog');
+      return;
+    }
+    
     _isExiting = true;
+    _showedDialog = false;
+    Logger.instance.d('BlockText: Starting confirm exit mode');
+    Logger.instance.d('BlockText: Original text: "${widget.text}"');
+    Logger.instance.d('BlockText: Current text: "${_editingController.text}"');
+    
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future.delayed(const Duration(milliseconds: 100));
     
     try {
-      FocusScope.of(context).unfocus();
+      if (_editingController.text != widget.text) {
+        _showedDialog = true;
+        final shouldSave = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              backgroundColor: Colors.black87,
+              title: const Text('保存更改?', 
+                style: TextStyle(color: Colors.white),
+              ),
+              content: const Text('您想保存对文本的更改吗？',
+                style: TextStyle(color: Colors.white),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Logger.instance.d('BlockText: User chose to discard changes');
+                    Navigator.of(context).pop(false);
+                  },
+                  child: const Text('否', style: TextStyle(color: Colors.white)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Logger.instance.d('BlockText: User chose to save changes');
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text('是', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
 
-      if (_editingController.text == widget.text) {
-        setState(() {
-          _isEditing = false;
-        });
-        return;
+        Logger.instance.d('BlockText: Dialog result: $shouldSave');
+        
+        if (shouldSave == true) {
+          widget.onTextChanged?.call(_editingController.text);
+          Logger.instance.d('BlockText: Changes saved');
+        } else {
+          _editingController.text = widget.text;
+          Logger.instance.d('BlockText: Changes discarded');
+        }
       }
 
+      setState(() {
+        _isEditing = false;
+      });
+    } catch (e) {
+      Logger.instance.e('BlockText: Error in confirm dialog', e);
+    } finally {
+      _isExiting = false;
+      Logger.instance.d('BlockText: Exit mode completed');
+    }
+  }
+
+  void _startEditing() {
+    if (!widget.settings.allowEditing) return;
+    
+    Logger.instance.d('BlockText: Starting edit mode');
+    setState(() {
+      _isEditing = true;
+      _editingController.text = widget.text;
+    });
+
+    Future.delayed(Duration.zero, () {
+      _focusNode.requestFocus();
+      Logger.instance.d('BlockText: Requested focus for editing');
+    });
+  }
+
+  Future<void> _stopEditing() async {
+    if (!_isEditing) return;
+    
+    Logger.instance.d('BlockText: Stopping edit mode');
+    
+    if (_editingController.text != widget.text) {
+      // 如果文本有变化，显示确认话框
       final shouldSave = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -108,47 +189,16 @@ class _BlockTextState extends State<BlockText> {
         },
       );
 
-      if (shouldSave == true && widget.onTextChanged != null) {
-        widget.onTextChanged!(_editingController.text);
+      if (shouldSave == true) {
+        widget.onTextChanged?.call(_editingController.text);
       } else {
         _editingController.text = widget.text;
       }
-
-      setState(() {
-        _isEditing = false;
-      });
-
-    } finally {
-      _isExiting = false;
     }
-  }
-
-  void _startEditing() {
-    if (widget.settings.allowEditing) {
-      _editingController = TextEditingController(text: widget.text);
-      
-      setState(() {
-        _isEditing = true;
-        Logger.instance.d('BlockText: Entering edit mode.');
-      });
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        FocusScope.of(context).requestFocus(_focusNode);
-        Logger.instance.d('BlockText: Requesting focus in next frame');
-      });
-    }
-  }
-
-  void _stopEditing() {
-    if (widget.onTextChanged != null) {
-      widget.onTextChanged!(_editingController.text);
-    }
-    
-    _editingController.dispose();
     
     setState(() {
       _isEditing = false;
-      Logger.instance.d('BlockText: Exiting edit mode.');
+      _isExiting = false;
     });
   }
 
@@ -236,13 +286,76 @@ class _BlockTextState extends State<BlockText> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isEditing) {
+      return WillPopScope(
+        onWillPop: () async {
+          Logger.instance.d('BlockText: Back button pressed while editing');
+          await _confirmExitEditMode();
+          return false;
+        },
+        child: TextField(
+          controller: _editingController,
+          focusNode: _focusNode,
+          autofocus: true,
+          style: TextStyle(
+            fontSize: widget.settings.fontSize,
+            color: widget.settings.textColor,
+            fontWeight: widget.settings.isBold ? FontWeight.bold : FontWeight.normal,
+            height: widget.settings.lineHeight,
+            decoration: widget.settings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
+            fontFamily: widget.settings.fontFamily,
+          ),
+          decoration: InputDecoration(
+            border: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          maxLines: null,
+          onChanged: (value) {
+            _pendingText = value;
+            Logger.instance.d('BlockText: Text changed, pending: "$value"');
+          },
+        ),
+      );
+    }
+
+    final textStyle = TextStyle(
+      fontSize: widget.settings.fontSize,
+      color: widget.settings.textColor,
+      fontWeight: widget.settings.isBold ? FontWeight.bold : FontWeight.normal,
+      height: widget.settings.lineHeight,
+      decoration: widget.settings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
+      fontFamily: widget.settings.fontFamily,
+    );
+
+    final text = '${' ' * widget.settings.firstLineSpaces}${widget.text}';
+
     return GestureDetector(
-      onLongPress: () {
-        _showOptionsDialog(context);
+      onLongPressStart: (LongPressStartDetails details) {
+        final RenderBox box = context.findRenderObject() as RenderBox;
+        final localPosition = box.globalToLocal(details.globalPosition);
+        final halfWidth = box.size.width / 2;
+        
+        Logger.instance.d('BlockText: Long press detected at (${localPosition.dx}, ${localPosition.dy})');
+        Logger.instance.d('BlockText: Text block width: ${box.size.width}, half width: $halfWidth');
+        
+        if (localPosition.dx > halfWidth) {
+          Logger.instance.d('BlockText: Long press on right half, entering edit mode');
+          _startEditing();
+        } else {
+          Logger.instance.d('BlockText: Long press on left half, showing options dialog');
+          _showOptionsDialog(context);
+        }
       },
       child: Padding(
         padding: EdgeInsets.only(
-          left: widget.settings.paragraphIndent.toDouble(),
           bottom: widget.settings.paragraphSpacing,
         ),
         child: widget.settings.enlargeFirstLetter && widget.text.isNotEmpty
@@ -250,40 +363,19 @@ class _BlockTextState extends State<BlockText> {
                 text: TextSpan(
                   children: [
                     TextSpan(
-                      text: widget.text[0],
-                      style: TextStyle(
-                        fontSize: widget.settings.fontSize * 1.5,
-                        color: widget.settings.textColor,
-                        fontWeight: widget.settings.isBold ? FontWeight.bold : FontWeight.normal,
-                        height: widget.settings.lineHeight,
-                        decoration: widget.settings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
-                        fontFamily: widget.settings.fontFamily,
-                      ),
+                      text: text[0],
+                      style: textStyle.copyWith(fontSize: widget.settings.fontSize * 1.5),
                     ),
                     TextSpan(
-                      text: widget.text.substring(1),
-                      style: TextStyle(
-                        fontSize: widget.settings.fontSize,
-                        color: widget.settings.textColor,
-                        fontWeight: widget.settings.isBold ? FontWeight.bold : FontWeight.normal,
-                        height: widget.settings.lineHeight,
-                        decoration: widget.settings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
-                        fontFamily: widget.settings.fontFamily,
-                      ),
+                      text: text.substring(1),
+                      style: textStyle,
                     ),
                   ],
                 ),
               )
             : Text(
-                widget.text,
-                style: TextStyle(
-                  fontSize: widget.settings.fontSize,
-                  color: widget.settings.textColor,
-                  fontWeight: widget.settings.isBold ? FontWeight.bold : FontWeight.normal,
-                  height: widget.settings.lineHeight,
-                  decoration: widget.settings.hasUnderline ? TextDecoration.underline : TextDecoration.none,
-                  fontFamily: widget.settings.fontFamily,
-                ),
+                text,
+                style: textStyle,
               ),
       ),
     );
