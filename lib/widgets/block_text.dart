@@ -291,7 +291,8 @@ class _BlockTextState extends State<BlockText> {
         onWillPop: () async {
           Logger.instance.d('BlockText: Back button pressed while editing');
           await _confirmExitEditMode();
-          return false;
+          // 只有在不再编辑状态时才允许退出
+          return !_isEditing;
         },
         child: TextField(
           controller: _editingController,
