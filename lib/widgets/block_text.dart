@@ -77,17 +77,14 @@ class _BlockTextState extends State<BlockText> {
     }
     
     _isExiting = true;
-    _showedDialog = false;
     Logger.instance.d('BlockText: Starting confirm exit mode');
-    Logger.instance.d('BlockText: Original text: "${widget.text}"');
-    Logger.instance.d('BlockText: Current text: "${_editingController.text}"');
     
+    // 先隐藏键盘
     FocusManager.instance.primaryFocus?.unfocus();
     await Future.delayed(const Duration(milliseconds: 100));
     
     try {
       if (_editingController.text != widget.text) {
-        _showedDialog = true;
         final shouldSave = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
@@ -126,13 +123,13 @@ class _BlockTextState extends State<BlockText> {
           widget.onTextChanged?.call(_editingController.text);
           Logger.instance.d('BlockText: Changes saved');
         } else {
-          _editingController.text = widget.text;
+          _editingController.text = widget.text;  // 恢复原始文本
           Logger.instance.d('BlockText: Changes discarded');
         }
       }
 
       setState(() {
-        _isEditing = false;
+        _isEditing = false;  // 退出编辑模式
       });
     } catch (e) {
       Logger.instance.e('BlockText: Error in confirm dialog', e);
@@ -291,8 +288,8 @@ class _BlockTextState extends State<BlockText> {
         onWillPop: () async {
           Logger.instance.d('BlockText: Back button pressed while editing');
           await _confirmExitEditMode();
-          // 只有在不再编辑状态时才允许退出
-          return !_isEditing;
+          // 在编辑模式下，手势退出永远返回 false，不退出页面
+          return false; // 确保不退出页面
         },
         child: TextField(
           controller: _editingController,
