@@ -110,6 +110,75 @@ class _FolderBrowserState extends State<FolderBrowser> {
     return false;
   }
 
+  void _showCreateFileDialog() {
+    String fileName = '';
+    bool isFolder = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('创建文件或文件夹'),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    decoration: const InputDecoration(labelText: '文件名'),
+                    onChanged: (value) {
+                      fileName = value;
+                    },
+                  ),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: isFolder,
+                        onChanged: (value) {
+                          setState(() {
+                            isFolder = value ?? false;
+                          });
+                        },
+                      ),
+                      const Text('创建为文件夹'),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                if (fileName.isNotEmpty) {
+                  _createFileOrFolder(fileName, isFolder);
+                }
+              },
+              child: const Text('创建'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('取消'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _createFileOrFolder(String name, bool isFolder) async {
+    try {
+      String newPath = path.join(_currentPath, name);
+      await FileManager.instance.createFileOrFolder(newPath, isFolder); // 使用 FileManager 创建文件或文件夹
+      await _loadFiles(); // 重新加载文件列表
+    } catch (e) {
+      Logger.instance.e('Error creating file or folder', e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -135,8 +204,20 @@ class _FolderBrowserState extends State<FolderBrowser> {
             ),
             body: ListView.builder(
               controller: _scrollController,
-              itemCount: _files.length,
+              itemCount: _files.length + 1, // 增加 +1 以显示创建项
               itemBuilder: (context, index) {
+                if (index == _files.length) {
+                  // 显示创建文件/文件夹的项
+                  return ListTile(
+                    leading: const Icon(Icons.add, color: Colors.white),
+                    title: const Text(
+                      '创建文件/文件夹',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: _showCreateFileDialog,
+                  );
+                }
+
                 final file = _files[index];
                 return Column(
                   children: [

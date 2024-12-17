@@ -150,4 +150,22 @@ class FileManager {
     Logger.instance.d('Formatted size: $bytes bytes -> $result');
     return result;
   }
+
+  /// 创建文件或文件夹
+  Future<void> createFileOrFolder(String path, bool isFolder) async {
+    try {
+      if (isFolder) {
+        final directory = io.Directory(path);
+        await directory.create(recursive: true);
+        Logger.instance.d('Folder created: $path');
+      } else {
+        final file = io.File(path);
+        await file.create(recursive: true);
+        Logger.instance.d('File created: $path');
+      }
+    } catch (e) {
+      Logger.instance.e('Error creating file or folder: $path', e);
+      throw Exception('Error creating file or folder: $e');
+    }
+  }
 } 
