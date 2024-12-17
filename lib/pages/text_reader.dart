@@ -92,6 +92,10 @@ class _TextReaderState extends State<TextReader> {
         _isLoading = false;
       });
       
+      if (_content.isEmpty) {
+        Logger.instance.d('TextReader: Loaded content is empty for file: ${widget.filePath}');
+      }
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _restoreReadingProgress();
       });
@@ -154,6 +158,34 @@ class _TextReaderState extends State<TextReader> {
 
   List<Widget> _buildParagraphs() {
     final paragraphs = _content.split('\n').where((text) => text.trim().isNotEmpty).toList();
+
+    // 如果内容为空，插入一个新的 BlockText 组件
+    if (paragraphs.isEmpty) {
+      Logger.instance.d('TextReader: paragraphs is empty');
+      return [
+        BlockText(
+          text: '', // 初始为空
+          settings: _textSettings,
+          onSettingsChanged: (newSettings) {
+            setState(() {
+              _textSettings = newSettings;
+              Logger.instance.d('TextReader: Settings updated from BlockText');
+            });
+            _saveTextSettings();
+          },
+          contextMenuBuilder: _buildContextMenu,
+          onGlobalTap: _globalTapController.stream,
+          onTextChanged: (String newText) {
+            Logger.instance.d('TextReader: Updating paragraph content');
+            setState(() {
+              _content = newText; // 更新内容
+            });
+            _saveContentToFile();
+          },
+        ),
+      ];
+    }
+
     return List.generate(paragraphs.length, (index) {
       return BlockText(
         text: paragraphs[index].trim(),
