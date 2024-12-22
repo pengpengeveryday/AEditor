@@ -146,14 +146,26 @@ class _FolderBrowserState extends State<FolderBrowser> {
       String char = str[i];
       if (chineseNumbers.containsKey(char)) {
         int value = chineseNumbers[char]!;
-        result += temp + value;
-        temp = 0;
+
+        if (value == 10 || value == 100 || value == 1000) {
+          if (temp == 0) {
+            temp = 1; // 处理如“十”开头的情况
+          }
+          temp *= value;
+          result += temp;
+          temp = 0;
+        } else {
+          temp = value;
+        }
         hasNumber = true; // 标记已经遇到数字
       } else {
         // 如果遇到非数字字符
         if (!hasNumber) {
           prefix += char; // 保留数字前面的部分
         } else {
+          if (temp > 0) {
+            result += temp;
+          }
           // 如果前面已经遇到数字，返回结果
           return {'prefix': prefix, 'number': result.toString()}; // 返回prefix和数字
         }
