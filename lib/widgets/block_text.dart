@@ -12,6 +12,7 @@ class BlockText extends StatefulWidget {
   final Function(TextSettings)? onSettingsChanged;
   final Function(String)? onTextChanged;
   final Stream<void>? onGlobalTap;
+  final bool isEditing;
 
   const BlockText({
     Key? key,
@@ -21,6 +22,7 @@ class BlockText extends StatefulWidget {
     this.onSettingsChanged,
     this.onTextChanged,
     this.onGlobalTap,
+    this.isEditing = false,
   }) : super(key: key);
 
   @override

@@ -82,10 +82,85 @@ class _FolderBrowserState extends State<FolderBrowser> {
       final files = await FileManager.instance.loadFiles(_currentPath);
       setState(() {
         _files = files;
+
+        // 对文件夹进行排序，文件夹排在前
+        _files.sort((a, b) {
+          // 文件夹排在前
+          if (!a.isFile && b.isFile) return -1; // a 是文件夹，b 是文件
+          if (a.isFile && !b.isFile) return 1;  // a 是文件，b 是文件夹
+
+          // 获取比较结果
+          var resultA = _chineseToNumber(a.name);
+          var resultB = _chineseToNumber(b.name);
+
+          // 打印结果
+          Logger.instance.d('File: "${a.name}" -> Prefix: "${resultA['prefix']}", Number: "${resultA['number']}"');
+          Logger.instance.d('File: "${b.name}" -> Prefix: "${resultB['prefix']}", Number: "${resultB['number']}"');
+
+          String prefixA = resultA['prefix']!;
+          String numberA = resultA['number']!;
+          String prefixB = resultB['prefix']!;
+          String numberB = resultB['number']!;
+
+          // 首先比较prefix
+          int prefixComparison = prefixA.compareTo(prefixB);
+          if (prefixComparison != 0) {
+            return prefixComparison; // 如果prefix不同，直接返回比较结果
+          }
+
+          // 如果prefix相同，比较数字
+          return int.parse(numberA).compareTo(int.parse(numberB));
+        });
       });
     } catch (e) {
       Logger.instance.e('Error loading files', e);
     }
+  }
+
+  // 汉字数字转换为阿拉伯数字
+  Map<String, String> _chineseToNumber(String str) {
+    const Map<String, int> chineseNumbers = {
+      '零': 0,
+      '一': 1,
+      '二': 2,
+      '三': 3,
+      '四': 4,
+      '五': 5,
+      '六': 6,
+      '七': 7,
+      '八': 8,
+      '九': 9,
+      '十': 10,
+      '百': 100,
+      '千': 1000,
+      '万': 10000,
+      '亿': 100000000,
+    };
+
+    int result = 0;
+    int temp = 0;
+    bool hasNumber = false; // 用于标记是否遇到数字
+    String prefix = ''; // 用于保存数字前面的部分
+
+    for (int i = 0; i < str.length; i++) {
+      String char = str[i];
+      if (chineseNumbers.containsKey(char)) {
+        int value = chineseNumbers[char]!;
+        result += temp + value;
+        temp = 0;
+        hasNumber = true; // 标记已经遇到数字
+      } else {
+        // 如果遇到非数字字符
+        if (!hasNumber) {
+          prefix += char; // 保留数字前面的部分
+        } else {
+          // 如果前面已经遇到数字，返回结果
+          return {'prefix': prefix, 'number': result.toString()}; // 返回prefix和数字
+        }
+      }
+    }
+
+    return {'prefix': prefix, 'number': result.toString()}; // 返回最终结果
   }
 
   void _handleFolderTap(FileInfo folder) async {
