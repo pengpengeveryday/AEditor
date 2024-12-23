@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'text_reader.dart';
 import '../models/settings.dart';
+import 'epub_reader.dart';
 
 class FolderBrowser extends StatefulWidget {
   const FolderBrowser({super.key});
@@ -20,9 +21,11 @@ class _FolderBrowserState extends State<FolderBrowser> {
   bool _isScrolling = false;
 
   String get _currentPath => Settings.instance.currentPath;
-  
+
   String _getTitle() {
-    return FileManager.instance.isRootPath(_currentPath) ? 'AEditor' : path.basename(_currentPath);
+    return FileManager.instance.isRootPath(_currentPath)
+        ? 'AEditor'
+        : path.basename(_currentPath);
   }
 
   @override
@@ -43,10 +46,10 @@ class _FolderBrowserState extends State<FolderBrowser> {
     if (lastReadingFile != null) {
       String lastReadingDir = path.dirname(lastReadingFile);
       Logger.instance.d('Last reading directory: $lastReadingDir');
-      
+
       await Settings.instance.setCurrentPath(lastReadingDir);
       await _loadFiles();
-      
+
       // 等待文件列表加载完成后再滚动
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToFile(lastReadingFile);
@@ -59,7 +62,7 @@ class _FolderBrowserState extends State<FolderBrowser> {
   void _scrollToFile(String filePath) {
     String fileName = path.basename(filePath);
     int fileIndex = _files.indexWhere((file) => file.name == fileName);
-    
+
     if (fileIndex != -1) {
       Logger.instance.d('Scrolling to file: $fileName at index $fileIndex');
       double offset = fileIndex * 56.0; // 假设每个ListTile高度为56
@@ -87,15 +90,17 @@ class _FolderBrowserState extends State<FolderBrowser> {
         _files.sort((a, b) {
           // 文件夹排在前
           if (!a.isFile && b.isFile) return -1; // a 是文件夹，b 是文件
-          if (a.isFile && !b.isFile) return 1;  // a 是文件，b 是文件夹
+          if (a.isFile && !b.isFile) return 1; // a 是文件，b 是文件夹
 
           // 获取比较结果
           var resultA = _chineseToNumber(a.name);
           var resultB = _chineseToNumber(b.name);
 
           // 打印结果
-          Logger.instance.d('File: "${a.name}" -> Prefix: "${resultA['prefix']}", Number: "${resultA['number']}"');
-          Logger.instance.d('File: "${b.name}" -> Prefix: "${resultB['prefix']}", Number: "${resultB['number']}"');
+          Logger.instance.d(
+              'File: "${a.name}" -> Prefix: "${resultA['prefix']}", Number: "${resultA['number']}"');
+          Logger.instance.d(
+              'File: "${b.name}" -> Prefix: "${resultB['prefix']}", Number: "${resultB['number']}"');
 
           String prefixA = resultA['prefix']!;
           String numberA = resultA['number']!;
@@ -182,18 +187,18 @@ class _FolderBrowserState extends State<FolderBrowser> {
 
   Future<bool> _onWillPop() async {
     Logger.instance.d('Handling back press, current path: $_currentPath');
-    
+
     if (FileManager.instance.isRootPath(_currentPath)) {
       Logger.instance.i('At root directory, allowing page exit');
       return true;
     }
-    
+
     String parentPath = path.dirname(_currentPath);
     Logger.instance.d('Moving to parent directory: $parentPath');
-    
+
     await Settings.instance.setCurrentPath(parentPath);
     await _loadFiles();
-    
+
     return false;
   }
 
@@ -259,7 +264,8 @@ class _FolderBrowserState extends State<FolderBrowser> {
   Future<void> _createFileOrFolder(String name, bool isFolder) async {
     try {
       String newPath = path.join(_currentPath, name);
-      await FileManager.instance.createFileOrFolder(newPath, isFolder); // 使用 FileManager 创建文件或文件夹
+      await FileManager.instance
+          .createFileOrFolder(newPath, isFolder); // 使用 FileManager 创建文件或文件夹
       await _loadFiles(); // 重新加载文件列表
     } catch (e) {
       Logger.instance.e('Error creating file or folder', e);
@@ -314,7 +320,9 @@ class _FolderBrowserState extends State<FolderBrowser> {
                         vertical: 8.0,
                       ),
                       leading: Icon(
-                        file.isFile ? Icons.insert_drive_file : Icons.folder_outlined,
+                        file.isFile
+                            ? Icons.insert_drive_file
+                            : Icons.folder_outlined,
                         color: Colors.white,
                         size: 24,
                       ),
@@ -330,23 +338,36 @@ class _FolderBrowserState extends State<FolderBrowser> {
                         if (!file.isFile) {
                           _handleFolderTap(file);
                         } else {
-                          setState(() {
-                            _showMask = true;
-                          });
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => TextReader(filePath: file.path),
-                            ),
-                          ).then((_) {
-                            Future.delayed(const Duration(milliseconds: 500), () {
-                              if (mounted) {
-                                setState(() {
-                                  _showMask = false;
-                                });
-                              }
+                          // 检查文件后缀
+                          if (file.name.endsWith('.epub')) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    EpubReader(epubPath: file.path),
+                              ),
+                            );
+                          } else {
+                            setState(() {
+                              _showMask = true;
                             });
-                          });
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    TextReader(filePath: file.path),
+                              ),
+                            ).then((_) {
+                              Future.delayed(const Duration(milliseconds: 500),
+                                  () {
+                                if (mounted) {
+                                  setState(() {
+                                    _showMask = false;
+                                  });
+                                }
+                              });
+                            });
+                          }
                         }
                       },
                     ),
@@ -372,4 +393,4 @@ class _FolderBrowserState extends State<FolderBrowser> {
       ),
     );
   }
-} 
+}
